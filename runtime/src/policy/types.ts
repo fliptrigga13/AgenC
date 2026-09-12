@@ -103,6 +103,8 @@ export interface CircuitBreakerConfig {
 export interface RuntimePolicyConfig {
   /** Default-safe: disabled unless explicitly enabled. */
   enabled?: boolean;
+  /** When true, only read actions are permitted; write actions are blocked. */
+  readOnly?: boolean;
   /** Explicit allow-list for action names. Empty/undefined means allow all. */
   allowActions?: string[];
   /** Explicit deny-list for action names. */

@@ -132,6 +132,73 @@ async function runAutonomousLifecycleStress() {
   scheduler.stop(); // idempotent call
   console.log(`  Lifecycle start/stop idempotency: PASSED.`);
 
+  console.log(`\n--- Test 4: Execution Concurrency & Re-Entrancy Guard ---`);
+  let slowActionRunCount = 0;
+  const reentrancyScheduler = new HeartbeatScheduler({
+    enabled: true,
+    intervalMs: 50,
+    timeoutMs: 1000,
+  });
+  reentrancyScheduler.registerAction({
+    name: 'slow-action',
+    enabled: true,
+    execute: async () => {
+      slowActionRunCount++;
+      await new Promise((r) => setTimeout(r, 60));
+      return { hasOutput: false, quiet: true };
+    },
+  });
+
+  // Call runOnce multiple times concurrently
+  const [res1, res2, res3] = await Promise.all([
+    reentrancyScheduler.runOnce(),
+    reentrancyScheduler.runOnce(),
+    reentrancyScheduler.runOnce(),
+  ]);
+
+  // Only one should have executed actionsRun: 1, the other two should have skipped (actionsRun: 0)
+  const totalActionsRun = res1.actionsRun + res2.actionsRun + res3.actionsRun;
+  console.log(`  Concurrent triggers: 3, actual executions allowed: ${totalActionsRun} (Must be 1)`);
+  if (totalActionsRun !== 1 || slowActionRunCount !== 1) {
+    throw new Error(`Re-entrancy guard failed: totalActionsRun=${totalActionsRun}, slowActionRunCount=${slowActionRunCount}`);
+  }
+  console.log(`  [PASS] Re-entrancy concurrency protection verified.`);
+
+  console.log(`\n--- Test 5: Mid-Cycle Stop Abort Invariant ---`);
+  const executedActionsInAbortTest = [];
+  const abortScheduler = new HeartbeatScheduler({
+    enabled: true,
+    intervalMs: 1000,
+    timeoutMs: 1000,
+  });
+
+  abortScheduler.registerAction({
+    name: 'action-1',
+    enabled: true,
+    execute: async () => {
+      executedActionsInAbortTest.push('action-1');
+      // While running action-1, trigger stop on the scheduler
+      abortScheduler.stop();
+      return { hasOutput: false, quiet: true };
+    },
+  });
+  abortScheduler.registerAction({
+    name: 'action-2',
+    enabled: true,
+    execute: async () => {
+      executedActionsInAbortTest.push('action-2');
+      return { hasOutput: false, quiet: true };
+    },
+  });
+
+  abortScheduler.start();
+  await abortScheduler.runOnce();
+  console.log(`  Actions executed before abort: [${executedActionsInAbortTest.join(', ')}] (Must be ['action-1'])`);
+  if (executedActionsInAbortTest.length !== 1 || executedActionsInAbortTest[0] !== 'action-1') {
+    throw new Error(`Mid-cycle stop abort failed! Action 2 ran after scheduler stopped: ${executedActionsInAbortTest}`);
+  }
+  console.log(`  [PASS] Mid-cycle stop immediately halts subsequent action execution.`);
+
   console.log(`\n==============================================================`);
   console.log(`  [ROUND 1 PASS] Autonomous Lifecycle & Scheduler Hardened!`);
   console.log(`==============================================================\n`);

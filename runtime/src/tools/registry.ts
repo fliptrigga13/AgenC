@@ -200,8 +200,18 @@ function inferToolAccess(toolName: string): "read" | "write" {
   const action = (toolName.split(".").pop() ?? toolName).toLowerCase();
   // Exact match for standalone read actions
   if (action === "stat" || action === "status") return "read";
-  // Prefix match for compound read actions (getTask, listDir, readFile, queryBalance, etc.)
-  const readPrefixes = ["get", "list", "query", "inspect", "read"];
+  // Prefix match for compound read actions (getTask, listDir, readFile, queryBalance, searchTasks, findFiles, etc.)
+  const readPrefixes = [
+    "get",
+    "list",
+    "query",
+    "inspect",
+    "read",
+    "search",
+    "find",
+    "fetch",
+    "check",
+  ];
   if (readPrefixes.some((p) => action.startsWith(p))) return "read";
   return "write";
 }

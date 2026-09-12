@@ -144,7 +144,7 @@ export class SqliteReplayTimelineStore implements ReplayTimelineStore {
   async query(
     filter: ReplayTimelineQuery = {},
   ): Promise<ReadonlyArray<ReplayTimelineRecord>> {
-    if (filter.limit === 0) {
+    if (filter.limit !== undefined && filter.limit <= 0) {
       return [];
     }
     const db = await this.getDb();
@@ -184,16 +184,14 @@ export class SqliteReplayTimelineStore implements ReplayTimelineStore {
 
     const orderBy = "slot ASC, signature ASC, seq ASC, source_event_type ASC";
 
-    const limitClause =
-      filter.limit !== undefined && filter.limit > 0
-        ? " LIMIT @limit OFFSET @offset"
-        : "";
-
-    if (filter.limit === undefined || filter.limit > 0) {
-      params.offset = filter.offset ?? 0;
-    }
+    let limitClause = "";
     if (filter.limit !== undefined && filter.limit > 0) {
+      limitClause = " LIMIT @limit OFFSET @offset";
       params.limit = filter.limit;
+      params.offset = Math.max(0, filter.offset ?? 0);
+    } else if (filter.offset !== undefined && filter.offset > 0) {
+      limitClause = " LIMIT -1 OFFSET @offset";
+      params.offset = filter.offset;
     }
 
     const sql = `

@@ -9,7 +9,7 @@
  * 4. Command injection & shell operator fuzzing on tool boundaries
  */
 
-import { SessionIsolationManager, safePath } from '../runtime/dist/index.mjs';
+import { SessionIsolationManager, safePath, ToolRegistry, PolicyEngine } from '../runtime/dist/index.mjs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { mkdirSync, existsSync } from 'node:fs';
@@ -229,6 +229,75 @@ async function runSessionSandboxStress() {
   console.log(`  Blocked 100% of traversal attacks with 0 false passes and 0 information leakage.`);
   console.log(`  Legitimate nested workspace access verified: ${legitRes.safe}`);
   console.log(`  [PASS] Filesystem Tool Sandbox Invariants 100% Battle-Hardened.`);
+
+  // --------------------------------------------------------------------------
+  // Test 4: Tool Policy Access Inference & Read-Only Confinement Stress
+  // --------------------------------------------------------------------------
+  console.log(`\n--- Test 4: Tool Policy Access Inference & Read-Only Confinement ---`);
+  
+  const readActions = [
+    'memory.search',
+    'agenc.searchTasks',
+    'system.findFiles',
+    'system.fetchUrl',
+    'health.check',
+    'system.readFile',
+    'system.listDir',
+    'agenc.getTask',
+    'system.stat',
+    'system.status',
+  ];
+
+  const writeActions = [
+    'system.writeFile',
+    'system.delete',
+    'system.mkdir',
+    'agenc.createTask',
+    'agenc.claimTask',
+    'task.execute',
+  ];
+
+  // Create PolicyEngine with read-only policy
+  const readOnlyPolicyEngine = new PolicyEngine();
+  readOnlyPolicyEngine.setPolicy({
+    enabled: true,
+    readOnly: true, // only allow read actions
+  });
+
+  const registry = new ToolRegistry({ policyEngine: readOnlyPolicyEngine });
+
+  // Register dummy tools for all actions
+  for (const name of [...readActions, ...writeActions]) {
+    registry.register({
+      name,
+      description: `Tool ${name}`,
+      inputSchema: { type: 'object' },
+      execute: async () => ({ content: JSON.stringify({ success: true, tool: name }) }),
+    });
+  }
+
+  const handler = registry.createToolHandler();
+
+  // Test read actions: ALL must be permitted
+  for (const toolName of readActions) {
+    const rawRes = await handler(toolName, {});
+    const parsed = JSON.parse(rawRes);
+    if (parsed.error && parsed.violation) {
+      throw new Error(`Read action "${toolName}" was falsely classified as write and blocked by read-only policy!`);
+    }
+  }
+  console.log(`  Verified ${readActions.length} read actions (search, find, fetch, check, get, list) permitted under read-only policy.`);
+
+  // Test write actions: ALL must be blocked
+  for (const toolName of writeActions) {
+    const rawRes = await handler(toolName, {});
+    const parsed = JSON.parse(rawRes);
+    if (!parsed.error || !parsed.violation) {
+      throw new Error(`Write action "${toolName}" escaped read-only policy confinement!`);
+    }
+  }
+  console.log(`  Verified ${writeActions.length} write actions strictly blocked under read-only policy.`);
+  console.log(`  [PASS] Tool access inference & policy confinement 100% verified.`);
 
   console.log(`\n================================================================`);
   console.log(`  [ROUND 3 PASS] Session Isolation & Tool Sandbox Hardened!`);

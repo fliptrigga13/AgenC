@@ -148,6 +148,24 @@ async function runReplayTimelineStress() {
   }
   console.log(`  Cursor saved and restored accurately: slot=${cursor.slot}, sig=${cursor.signature}`);
 
+  console.log(`\n--- Test 5: Offset without Limit Query Invariant ---`);
+  // All active rows in DB = 3000
+  // Query with offset: 500 should return exactly 2500 rows
+  const offsetRows = await store.query({ offset: 500 });
+  console.log(`  Query with offset: 500 returned: ${offsetRows.length} rows (Expected 2500)`);
+  if (offsetRows.length !== 2500) {
+    throw new Error(`Offset without limit failed! Expected 2500, got ${offsetRows.length}`);
+  }
+  console.log(`  [PASS] Offset without limit pagination works seamlessly.`);
+
+  console.log(`\n--- Test 6: Non-Positive Limit Query Boundary Guard ---`);
+  const negLimitRows = await store.query({ limit: -5 });
+  console.log(`  Query with limit: -5 returned: ${negLimitRows.length} rows (Expected 0)`);
+  if (negLimitRows.length !== 0) {
+    throw new Error(`Negative limit guard failed! Expected 0, got ${negLimitRows.length}`);
+  }
+  console.log(`  [PASS] Non-positive limit guard verified.`);
+
   // Clean up
   try {
     unlinkSync(testDbPath);

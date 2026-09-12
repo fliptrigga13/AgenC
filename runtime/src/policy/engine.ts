@@ -87,6 +87,9 @@ export class PolicyEngine {
     }
 
     if (this.policy.enabled) {
+      const readOnlyViolation = this.checkReadOnly(action);
+      if (readOnlyViolation) violations.push(readOnlyViolation);
+
       const toolViolation = this.checkToolRules(action);
       if (toolViolation) violations.push(toolViolation);
 
@@ -157,6 +160,17 @@ export class PolicyEngine {
       );
     }
 
+    return null;
+  }
+
+  private checkReadOnly(action: PolicyAction): PolicyViolation | null {
+    if (this.policy.readOnly && action.access === "write") {
+      return this.buildViolation(
+        "action_denied",
+        action,
+        `Write action "${action.name}" is blocked by read-only policy`,
+      );
+    }
     return null;
   }
 

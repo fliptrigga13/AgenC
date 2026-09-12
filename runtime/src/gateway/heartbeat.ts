@@ -130,6 +130,9 @@ export class HeartbeatScheduler {
   private readonly logger: Logger;
   private readonly _sendToChannels: (content: string) => Promise<void>;
 
+  private _executing = false;
+  private _stopRequested = false;
+
   constructor(config: HeartbeatConfig, options?: HeartbeatSchedulerOptions) {
     this.config = config;
     this.logger = options?.logger ?? silentLogger;
@@ -142,6 +145,10 @@ export class HeartbeatScheduler {
 
   get running(): boolean {
     return this._state === "running";
+  }
+
+  get executing(): boolean {
+    return this._executing;
   }
 
   get lastRunAt(): number | null {
@@ -198,6 +205,7 @@ export class HeartbeatScheduler {
 
     this._state = "stopped";
     this._nextRunAt = null;
+    this._stopRequested = true;
     this.logger.info("Heartbeat scheduler stopped");
   }
 
@@ -208,49 +216,67 @@ export class HeartbeatScheduler {
   async runOnce(): Promise<HeartbeatRunSummary> {
     const now = Date.now();
 
+    if (this._executing) {
+      this.logger.debug("Heartbeat cycle already in progress — skipping concurrent execution");
+      return { ranAt: now, actionsRun: 0, actionsFailed: 0, messagesPosted: 0 };
+    }
+
     if (!this.isWithinActiveHours()) {
       this.logger.debug("Heartbeat skipped — outside active hours");
       return { ranAt: now, actionsRun: 0, actionsFailed: 0, messagesPosted: 0 };
     }
 
+    this._executing = true;
+    this._stopRequested = false;
     const enabledActions = this.actions.filter((a) => a.enabled);
     let actionsFailed = 0;
     let messagesPosted = 0;
+    let actionsRun = 0;
 
     const context: HeartbeatContext = {
       logger: this.logger,
       sendToChannels: this._sendToChannels,
     };
 
-    for (const action of enabledActions) {
-      try {
-        const result = await this.executeWithTimeout(action, context);
-
-        if (!result.quiet && result.hasOutput && result.output) {
-          await this._sendToChannels(result.output);
-          messagesPosted++;
+    try {
+      for (const action of enabledActions) {
+        if (this._stopRequested) {
+          this.logger.debug("Heartbeat cycle aborted — scheduler stopped");
+          break;
         }
-      } catch (err) {
-        actionsFailed++;
-        this.logger.error(`Heartbeat action "${action.name}" failed:`, err);
+
+        actionsRun++;
+        try {
+          const result = await this.executeWithTimeout(action, context);
+
+          if (!result.quiet && result.hasOutput && result.output) {
+            await this._sendToChannels(result.output);
+            messagesPosted++;
+          }
+        } catch (err) {
+          actionsFailed++;
+          this.logger.error(`Heartbeat action "${action.name}" failed:`, err);
+        }
       }
+
+      this._lastRunAt = now;
+      if (this._state === "running") {
+        this._nextRunAt = now + this.config.intervalMs;
+      }
+
+      this.logger.debug(
+        `Heartbeat cycle complete: ${actionsRun} run, ${actionsFailed} failed, ${messagesPosted} posted`,
+      );
+
+      return {
+        ranAt: now,
+        actionsRun,
+        actionsFailed,
+        messagesPosted,
+      };
+    } finally {
+      this._executing = false;
     }
-
-    this._lastRunAt = now;
-    if (this._state === "running") {
-      this._nextRunAt = now + this.config.intervalMs;
-    }
-
-    this.logger.debug(
-      `Heartbeat cycle complete: ${enabledActions.length} run, ${actionsFailed} failed, ${messagesPosted} posted`,
-    );
-
-    return {
-      ranAt: now,
-      actionsRun: enabledActions.length,
-      actionsFailed,
-      messagesPosted,
-    };
   }
 
   // --------------------------------------------------------------------------
