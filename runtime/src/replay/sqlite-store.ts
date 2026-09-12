@@ -293,7 +293,9 @@ export class SqliteReplayTimelineStore implements ReplayTimelineStore {
 
     if (this.dbPath !== ":memory:") {
       this.db.pragma("journal_mode = WAL");
+      this.db.pragma("synchronous = NORMAL");
     }
+    this.db.pragma("busy_timeout = 5000");
 
     await this.ensureSchema(this.db);
     return this.db;

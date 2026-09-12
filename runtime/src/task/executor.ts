@@ -55,6 +55,7 @@ import {
   TaskTimeoutError,
   ClaimExpiredError,
   RetryExhaustedError,
+  TaskNotClaimableError,
 } from "../types/errors.js";
 
 // ============================================================================
@@ -1157,6 +1158,14 @@ export class TaskExecutor {
           throw lastError;
         }
 
+        // Non-retryable error: if task is not claimable (already claimed, max workers, expired), fail fast
+        if (
+          lastError instanceof TaskNotClaimableError ||
+          lastError.name === "TaskNotClaimableError"
+        ) {
+          throw lastError;
+        }
+
         const metricsKey = stage === "claim" ? "claimRetries" : "submitRetries";
         this.metrics[metricsKey]++;
         this.metricsProvider.counter(
@@ -1272,6 +1281,12 @@ export class TaskExecutor {
    * Infer the pipeline stage from the error type.
    */
   private inferFailureStage(error: Error): DeadLetterStage {
+    if (
+      error instanceof TaskNotClaimableError ||
+      error.name === "TaskNotClaimableError"
+    ) {
+      return "claim";
+    }
     if (error instanceof RetryExhaustedError) {
       return error.stage as DeadLetterStage;
     }

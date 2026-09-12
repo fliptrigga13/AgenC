@@ -58,6 +58,7 @@ interface WsModule {
   WebSocketServer: new (opts: {
     port: number;
     host?: string;
+    maxPayload?: number;
   }) => WsWebSocketServer;
 }
 
@@ -328,9 +329,13 @@ export class Gateway {
       );
     }
 
+    const MAX_CONCURRENT_CLIENTS = 512;
+    const MAX_PAYLOAD_BYTES = 10 * 1024 * 1024; // 10MB safety bound
+
     this.wss = new wsMod.WebSocketServer({
       port,
       host,
+      maxPayload: MAX_PAYLOAD_BYTES,
     });
 
     this.wss.on("connection", (...args: unknown[]) => {
@@ -338,6 +343,19 @@ export class Gateway {
       const request = args[1] as
         | { socket?: { remoteAddress?: string } }
         | undefined;
+
+      if (this.wsClients.size >= MAX_CONCURRENT_CLIENTS) {
+        this.logger.warn(
+          `Rejecting connection from ${request?.socket?.remoteAddress ?? "unknown"}: maximum concurrent connections reached (${MAX_CONCURRENT_CLIENTS})`,
+        );
+        try {
+          socket.close();
+        } catch {
+          // ignore close error
+        }
+        return;
+      }
+
       const clientId = `client_${++this.clientCounter}`;
       this.wsClients.set(clientId, socket);
       this.logger.debug(`Control plane client connected: ${clientId}`);
