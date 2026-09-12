@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
@@ -6,9 +7,12 @@ import {
 } from "./pipeline-quality-runner.js";
 import { serializePipelineQualityArtifact } from "./pipeline-quality.js";
 
-const INCIDENT_FIXTURE_DIR = fileURLToPath(
+const CANDIDATE_DIR = fileURLToPath(
   new URL("../../benchmarks/v1/incidents", import.meta.url),
 );
+const INCIDENT_FIXTURE_DIR = existsSync(CANDIDATE_DIR)
+  ? CANDIDATE_DIR
+  : fileURLToPath(new URL("../../benchmarks/v1/scenarios", import.meta.url));
 
 describe("pipeline-quality runner", () => {
   it("runs suite with deterministic metrics and injected desktop runner", async () => {

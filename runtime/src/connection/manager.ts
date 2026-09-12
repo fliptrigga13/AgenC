@@ -26,6 +26,8 @@ import { AllEndpointsUnhealthyError } from "./errors.js";
 import {
   isRetryableError,
   isConnectionLevelError,
+  isAlreadyProcessedError,
+  extractSignatureFromArgs,
   isWriteMethod,
   computeBackoff,
   deriveCoalesceKey,
@@ -307,8 +309,8 @@ export class ConnectionManager {
           );
 
           const nextConn = this.connections.get(nextUrl)!;
+          const start = Date.now();
           try {
-            const start = Date.now();
             const result = await this.callRpcRequest(nextConn, method, args);
             this.recordSuccess(nextUrl, Date.now() - start);
             this.metrics?.histogram(
@@ -319,6 +321,26 @@ export class ConnectionManager {
             return result;
           } catch (failoverError) {
             this.recordFailure(nextUrl, failoverError);
+
+            // If the transaction was already processed/committed by the cluster,
+            // the failover RPC will throw "This transaction has already been processed".
+            // Since the transaction actually reached the network, treat this as confirmed.
+            if (isAlreadyProcessedError(failoverError)) {
+              const signature = extractSignatureFromArgs(args);
+              this.logger.info(
+                `Write failover on ${this.endpointLabels.get(nextUrl)}: transaction already processed by cluster${signature ? ` (${signature})` : ""}; treating as confirmed`,
+              );
+              this.recordSuccess(nextUrl, Date.now() - start);
+              this.metrics?.histogram(
+                TELEMETRY_METRIC_NAMES.RPC_REQUEST_DURATION,
+                Date.now() - rpcStart,
+                { method },
+              );
+              if (signature) {
+                return signature;
+              }
+            }
+
             throw failoverError;
           }
         }

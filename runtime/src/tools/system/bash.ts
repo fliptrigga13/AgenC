@@ -179,14 +179,30 @@ function matchesDenyPrefix(base: string): boolean {
 
 /**
  * Build a minimal environment for spawned processes.
- * Only exposes PATH by default to prevent secret exfiltration.
+ * Only exposes standard execution paths and non-sensitive system variables
+ * to prevent secret exfiltration while ensuring reliable execution across platforms.
  */
-function buildEnv(configEnv?: Record<string, string>): Record<string, string> {
+export function buildEnv(
+  configEnv?: Record<string, string>,
+  platform: NodeJS.Platform = process.platform,
+): Record<string, string> {
   if (configEnv) return configEnv;
-  return {
-    PATH: process.env.PATH ?? "/usr/local/bin:/usr/bin:/bin",
-    HOME: process.env.HOME ?? "",
+  const isWin = platform === "win32";
+  const env: Record<string, string> = {
+    PATH: process.env.PATH ?? (isWin ? "" : "/usr/local/bin:/usr/bin:/bin"),
+    HOME: process.env.HOME ?? (isWin ? (process.env.USERPROFILE ?? "") : ""),
   };
+
+  if (isWin) {
+    const sysRoot = process.env.SystemRoot ?? process.env.SYSTEMROOT;
+    if (sysRoot) env.SystemRoot = sysRoot;
+    if (process.env.TEMP) env.TEMP = process.env.TEMP;
+    if (process.env.TMP) env.TMP = process.env.TMP;
+    if (process.env.USERPROFILE) env.USERPROFILE = process.env.USERPROFILE;
+    if (process.env.PATHEXT) env.PATHEXT = process.env.PATHEXT;
+  }
+
+  return env;
 }
 
 /**

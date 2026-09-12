@@ -48,7 +48,7 @@ async function main() {
 
   const violations = [];
   for (const absFile of rustFiles) {
-    const relFile = path.relative(ROOT, absFile);
+    const relFile = path.relative(ROOT, absFile).replace(/\\/g, "/");
     if (EXCLUDED_FILES.has(relFile)) continue;
 
     const source = await fs.readFile(absFile, "utf8");

@@ -22,6 +22,9 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'chat', label: 'Chat', icon: <ChatIcon /> },
   { id: 'status', label: 'Status', icon: <StatusIcon /> },
   { id: 'skills', label: 'Skills', icon: <SkillsIcon /> },
+  { id: 'marketplace', label: 'Marketplace', icon: <MarketplaceIcon /> },
+  { id: 'governance', label: 'Governance', icon: <GovernanceIcon /> },
+  { id: 'reputation', label: 'Reputation', icon: <ReputationIcon /> },
   { id: 'tasks', label: 'Tasks', icon: <TasksIcon /> },
   { id: 'memory', label: 'Memory', icon: <MemoryIcon /> },
   { id: 'activity', label: 'Activity', icon: <ActivityIcon /> },
@@ -203,6 +206,35 @@ function DesktopIcon() {
       <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
       <line x1="8" y1="21" x2="16" y2="21" />
       <line x1="12" y1="17" x2="12" y2="21" />
+    </svg>
+  );
+}
+
+function MarketplaceIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <path d="M16 10a4 4 0 0 1-8 0" />
+    </svg>
+  );
+}
+
+function GovernanceIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2L2 7l10 5 10-5-10-5z" />
+      <path d="M2 17l10 5 10-5" />
+      <path d="M2 12l10 5 10-5" />
+    </svg>
+  );
+}
+
+function ReputationIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="8" r="6" />
+      <path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11" />
     </svg>
   );
 }

@@ -49,19 +49,7 @@ pub fn handler(ctx: Context<WithdrawReputationStake>, amount: u64) -> Result<()>
         CoordinationError::ReputationStakeInsufficientBalance
     );
 
-    // Transfer lamports from PDA to authority (program-owned account manipulation)
-    let stake_info = stake.to_account_info();
-    let authority_info = ctx.accounts.authority.to_account_info();
-
-    **stake_info.try_borrow_mut_lamports()? = stake_info
-        .lamports()
-        .checked_sub(amount)
-        .ok_or(CoordinationError::ArithmeticOverflow)?;
-    **authority_info.try_borrow_mut_lamports()? = authority_info
-        .lamports()
-        .checked_add(amount)
-        .ok_or(CoordinationError::ArithmeticOverflow)?;
-
+    // --- EFFECTS: Update state before transferring lamports (CEI pattern) ---
     stake.staked_amount = stake
         .staked_amount
         .checked_sub(amount)
@@ -73,6 +61,19 @@ pub fn handler(ctx: Context<WithdrawReputationStake>, amount: u64) -> Result<()>
         remaining_staked: stake.staked_amount,
         timestamp: clock.unix_timestamp,
     });
+
+    // --- INTERACTIONS: Transfer lamports from PDA to authority ---
+    let stake_info = stake.to_account_info();
+    let authority_info = ctx.accounts.authority.to_account_info();
+
+    **stake_info.try_borrow_mut_lamports()? = stake_info
+        .lamports()
+        .checked_sub(amount)
+        .ok_or(CoordinationError::ArithmeticOverflow)?;
+    **authority_info.try_borrow_mut_lamports()? = authority_info
+        .lamports()
+        .checked_add(amount)
+        .ok_or(CoordinationError::ArithmeticOverflow)?;
 
     Ok(())
 }

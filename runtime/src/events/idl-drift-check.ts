@@ -201,7 +201,7 @@ export async function checkIdlDrift(
   const idl = options.idl ?? (idlJson as unknown as IdlRoot);
   const overrides = options.overrides ?? [];
   const sourceText = await CONTRACT_SOURCE_TEXT;
-  const contractFileForOutput = relative(process.cwd(), CONTRACT_FILE);
+  const contractFileForOutput = relative(process.cwd(), CONTRACT_FILE).replace(/\\/g, "/");
   const idlEvents = nonAgentEventNamesFromIdl(idl);
 
   const idlEventSet = new Set(idlEvents);

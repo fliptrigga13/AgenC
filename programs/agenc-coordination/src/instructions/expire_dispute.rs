@@ -522,19 +522,6 @@ fn distribute_expired_funds<'a>(
     if no_votes && worker_completed {
         worker_amount = remaining_funds;
         transfer_lamports(escrow_info, worker_wallet_info, remaining_funds)?;
-    } else if no_votes {
-        let worker_share = remaining_funds
-            .checked_div(2)
-            .ok_or(CoordinationError::ArithmeticOverflow)?;
-        let creator_share = remaining_funds
-            .checked_sub(worker_share)
-            .ok_or(CoordinationError::ArithmeticOverflow)?;
-        creator_amount = creator_share;
-        worker_amount = worker_share;
-
-        debit_lamports(escrow_info, remaining_funds)?;
-        credit_lamports(creator_info, creator_share)?;
-        credit_lamports(worker_wallet_info, worker_share)?;
     } else {
         creator_amount = remaining_funds;
         transfer_lamports(escrow_info, creator_info, remaining_funds)?;
@@ -569,34 +556,6 @@ fn distribute_expired_tokens<'a>(
             worker_ta,
             escrow_authority,
             remaining_funds,
-            escrow_seeds,
-            token_program,
-        )?;
-    } else if no_votes {
-        let creator_ta = creator_token_account.ok_or(CoordinationError::MissingTokenAccounts)?;
-        let worker_ta = worker_token_account.ok_or(CoordinationError::MissingTokenAccounts)?;
-        let worker_share = remaining_funds
-            .checked_div(2)
-            .ok_or(CoordinationError::ArithmeticOverflow)?;
-        let creator_share = remaining_funds
-            .checked_sub(worker_share)
-            .ok_or(CoordinationError::ArithmeticOverflow)?;
-        creator_amount = creator_share;
-        worker_amount = worker_share;
-
-        transfer_tokens_from_escrow(
-            token_escrow,
-            creator_ta,
-            escrow_authority,
-            creator_share,
-            escrow_seeds,
-            token_program,
-        )?;
-        transfer_tokens_from_escrow(
-            token_escrow,
-            worker_ta,
-            escrow_authority,
-            worker_share,
             escrow_seeds,
             token_program,
         )?;

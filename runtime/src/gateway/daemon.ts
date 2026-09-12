@@ -305,7 +305,7 @@ async function resolveExecutablePath(
   command: string,
   envPath: string | undefined,
 ): Promise<string | undefined> {
-  if (command.includes('/')) {
+  if (command.includes('/') || command.includes('\\')) {
     return (await isExecutablePath(command)) ? command : undefined;
   }
 

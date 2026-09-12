@@ -59,6 +59,12 @@ pub fn handler(ctx: Context<DelegateReputation>, amount: u16, expires_at: i64) -
         CoordinationError::ReputationAgentNotActive
     );
 
+    // Delegator cannot delegate if they have pending disputes as defendant
+    require!(
+        delegator.disputes_as_defendant == 0,
+        CoordinationError::ReputationDisputesPending
+    );
+
     // Validate amount
     require!(
         amount > 0 && (MIN_DELEGATION_AMOUNT..=MAX_REPUTATION).contains(&amount),
@@ -77,6 +83,12 @@ pub fn handler(ctx: Context<DelegateReputation>, amount: u16, expires_at: i64) -
         .ok_or(CoordinationError::ReputationDelegationAmountInvalid)?;
 
     let clock = Clock::get()?;
+
+    // Delegator cannot delegate in the same slot they registered (sybil resistance)
+    require!(
+        clock.unix_timestamp > delegator.registered_at,
+        CoordinationError::ReputationAgentNotActive
+    );
 
     // Validate expires_at: 0 = no expiry, otherwise must be in the future
     require!(

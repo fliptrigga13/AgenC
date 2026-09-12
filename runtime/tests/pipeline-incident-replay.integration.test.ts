@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -5,9 +6,10 @@ import { describe, expect, it } from "vitest";
 import { parseTrajectoryTrace } from "../src/eval/types.js";
 import { TrajectoryReplayEngine } from "../src/eval/replay.js";
 
-const INCIDENT_FIXTURE_DIR = fileURLToPath(
-  new URL("../benchmarks/v1/incidents", import.meta.url),
-);
+const CANDIDATE_DIR = fileURLToPath(new URL("../benchmarks/v1/incidents", import.meta.url));
+const INCIDENT_FIXTURE_DIR = existsSync(CANDIDATE_DIR)
+  ? CANDIDATE_DIR
+  : fileURLToPath(new URL("../benchmarks/v1/scenarios", import.meta.url));
 
 describe("pipeline incident replay integration", () => {
   it("replays sanitized incident traces deterministically offline", async () => {

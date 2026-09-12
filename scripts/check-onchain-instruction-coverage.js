@@ -53,19 +53,29 @@ function loadInstructionNames(repoRoot) {
 }
 
 function loadTestFilePaths(repoRoot) {
-  const output = childProcess
-    .execSync("rg --files tests -g '*.ts'", {
-      cwd: repoRoot,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-    })
-    .trim();
+  try {
+    const output = childProcess
+      .execSync("rg --files tests -g '*.ts'", {
+        cwd: repoRoot,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      })
+      .trim();
 
-  if (!output) {
-    return [];
+    if (output) {
+      return output.split(/\r?\n/).map((relativePath) => resolveInsideRoot(repoRoot, relativePath));
+    }
+  } catch {
+    const testsDir = path.join(repoRoot, "tests");
+    if (fs.existsSync(testsDir)) {
+      const files = fs.readdirSync(testsDir, { recursive: true });
+      return files
+        .filter((f) => typeof f === "string" && f.endsWith(".ts"))
+        .map((f) => path.join(testsDir, f));
+    }
   }
 
-  return output.split("\n").map((relativePath) => resolveInsideRoot(repoRoot, relativePath));
+  return [];
 }
 
 function loadInvokedMethodNames(testFiles) {

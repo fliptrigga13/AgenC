@@ -303,9 +303,18 @@ function runToolTurnBenchmark(): ToolTurnBenchmarkResult {
 }
 
 function resolveDefaultIncidentFixtureDir(): string {
-  const local = path.resolve(process.cwd(), "benchmarks/v1/incidents");
-  if (existsSync(local)) return local;
-  return path.resolve(process.cwd(), "runtime/benchmarks/v1/incidents");
+  const candidates = [
+    path.resolve(process.cwd(), "benchmarks/v1/incidents"),
+    path.resolve(process.cwd(), "runtime/benchmarks/v1/incidents"),
+    path.resolve(process.cwd(), "benchmarks/v1/scenarios"),
+    path.resolve(process.cwd(), "runtime/benchmarks/v1/scenarios"),
+    path.resolve(process.cwd(), "../benchmarks/v1/incidents"),
+    path.resolve(process.cwd(), "../benchmarks/v1/scenarios"),
+  ];
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate;
+  }
+  return candidates[0];
 }
 
 async function runOfflineReplayBenchmark(

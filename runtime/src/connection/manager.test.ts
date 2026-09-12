@@ -9,6 +9,10 @@ import { AllEndpointsUnhealthyError, ConnectionError } from "./errors.js";
 import {
   isRetryableError,
   isConnectionLevelError,
+  isAlreadyProcessedError,
+  toBase58,
+  fromBase58,
+  extractSignatureFromArgs,
   isWriteMethod,
   computeBackoff,
   deriveCoalesceKey,
@@ -172,6 +176,71 @@ describe("isConnectionLevelError", () => {
     expect(isConnectionLevelError(new Error("blockhash not found"))).toBe(
       false,
     );
+  });
+});
+
+describe("isAlreadyProcessedError", () => {
+  it("returns true for 'already been processed'", () => {
+    expect(
+      isAlreadyProcessedError(
+        new Error("This transaction has already been processed"),
+      ),
+    ).toBe(true);
+  });
+
+  it("returns true for 'Transaction already processed'", () => {
+    expect(
+      isAlreadyProcessedError({
+        message: "Transaction already processed in slot 123",
+      }),
+    ).toBe(true);
+  });
+
+  it("returns false for ordinary RPC error", () => {
+    expect(isAlreadyProcessedError(new Error("Blockhash not found"))).toBe(
+      false,
+    );
+  });
+});
+
+describe("extractSignatureFromArgs and toBase58", () => {
+  it("extracts and encodes base58 signature from wire transaction base64", () => {
+    // 1 signature (compact-u16: 1), 64 bytes of signature data, followed by dummy message
+    const sigBytes = Buffer.alloc(64, 7);
+    const wire = Buffer.concat([
+      Buffer.from([1]),
+      sigBytes,
+      Buffer.from("msg"),
+    ]).toString("base64");
+    const sig = extractSignatureFromArgs([wire]);
+    expect(sig).toBeTruthy();
+    expect(sig).toBe(toBase58(sigBytes));
+  });
+
+  it("decodes base58 wire transactions when encoding: 'base58' is specified", () => {
+    const sigBytes = Buffer.alloc(64, 9);
+    const wireRaw = Buffer.concat([
+      Buffer.from([1]),
+      sigBytes,
+      Buffer.from("msg"),
+    ]);
+    const wireB58 = toBase58(wireRaw);
+    const sig = extractSignatureFromArgs([wireB58, { encoding: "base58" }]);
+    expect(sig).toBeTruthy();
+    expect(sig).toBe(toBase58(sigBytes));
+  });
+
+  it("roundtrips arbitrary bytes through toBase58 and fromBase58", () => {
+    const orig = Buffer.from("arbitrary payload test 12345");
+    const encoded = toBase58(orig);
+    const decoded = fromBase58(encoded);
+    expect(decoded).toBeTruthy();
+    expect(Buffer.from(decoded!)).toEqual(orig);
+  });
+
+  it("returns null on empty or malformed args", () => {
+    expect(extractSignatureFromArgs([])).toBeNull();
+    expect(extractSignatureFromArgs(["short"])).toBeNull();
   });
 });
 
@@ -577,6 +646,62 @@ describe("ConnectionManager failover", () => {
     };
     await rpc._rpcRequest("getBalance", []);
 
+    expect(mgr.getStats().activeEndpoint).toBe("https://b");
+  });
+});
+
+// ============================================================================
+// ConnectionManager — write failover
+// ============================================================================
+
+describe("ConnectionManager write failover", () => {
+  let mgr: ConnectionManager;
+
+  afterEach(() => {
+    mgr?.destroy();
+  });
+
+  it("fails over to next endpoint on connection-level write error", async () => {
+    const { mgr: m, getMock } = createTestManager(["https://a", "https://b"]);
+    mgr = m;
+
+    getMock("https://a").mockRejectedValueOnce(new Error("connect ETIMEDOUT"));
+    getMock("https://b").mockResolvedValueOnce({ result: "tx-sig-123" });
+
+    const conn = mgr.getConnection();
+    const rpc = conn as unknown as {
+      _rpcRequest: (m: string, a: unknown[]) => Promise<unknown>;
+    };
+    const result = await rpc._rpcRequest("sendTransaction", ["tx"]);
+
+    expect(result).toEqual({ result: "tx-sig-123" });
+    expect(mgr.getStats().activeEndpoint).toBe("https://b");
+  });
+
+  it("handles 'already been processed' on failover as confirmed", async () => {
+    const { mgr: m, getMock } = createTestManager(["https://a", "https://b"]);
+    mgr = m;
+
+    const sigBytes = Buffer.alloc(64, 42);
+    const wire = Buffer.concat([
+      Buffer.from([1]),
+      sigBytes,
+      Buffer.from("data"),
+    ]).toString("base64");
+    const expectedSig = toBase58(sigBytes);
+
+    getMock("https://a").mockRejectedValueOnce(new Error("connect ECONNRESET"));
+    getMock("https://b").mockRejectedValueOnce(
+      new Error("This transaction has already been processed"),
+    );
+
+    const conn = mgr.getConnection();
+    const rpc = conn as unknown as {
+      _rpcRequest: (m: string, a: unknown[]) => Promise<unknown>;
+    };
+    const result = await rpc._rpcRequest("sendTransaction", [wire]);
+
+    expect(result).toBe(expectedSig);
     expect(mgr.getStats().activeEndpoint).toBe("https://b");
   });
 });

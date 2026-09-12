@@ -1410,6 +1410,7 @@ export class AutonomousAgent extends AgentRuntime {
       .completeTask(toAnchorBytes(resultHash), null)
       .accountsPartial({
         task: task.pda,
+        creator: task.creator,
         claim: claimPda,
         escrow: escrowPda,
         worker: agentPda,

@@ -248,4 +248,27 @@ describe('App websocket integration', () => {
     expect(composer.selectionStart).toBe(6);
     expect(composer.selectionEnd).toBe(6);
   });
+
+  it('navigates seamlessly between Marketplace, Governance, and Reputation views', async () => {
+    render(<App />);
+
+    // Click [M] MARKET
+    const marketTab = screen.getByRole('button', { name: /\[M\]\s*MARKET/i });
+    fireEvent.click(marketTab);
+    expect(screen.getByText('ON-CHAIN SKILL MARKETPLACE')).toBeDefined();
+    expect(screen.getByText('Deep Research Synthesizer')).toBeDefined();
+
+    // Click [G] GOV
+    const govTab = screen.getByRole('button', { name: /\[G\]\s*GOV/i });
+    fireEvent.click(govTab);
+    expect(screen.getByText('PROTOCOL GOVERNANCE & DAO')).toBeDefined();
+    expect(screen.getByText(/AIP-14: Slash Fee Parameter Readjustment/i)).toBeDefined();
+
+    // Click [R] REPUTE
+    const reputeTab = screen.getByRole('button', { name: /\[R\]\s*REPUTE/i });
+    fireEvent.click(reputeTab);
+    expect(screen.getByText('REPUTATION & TRUST MESH')).toBeDefined();
+    expect(screen.getByText('2.50 SOL')).toBeDefined();
+  });
 });
+

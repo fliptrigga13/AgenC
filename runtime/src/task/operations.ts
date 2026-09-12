@@ -495,6 +495,7 @@ export class TaskOperations {
         )
         .accountsPartial({
           task: taskPda,
+          creator: task.creator,
           claim: claimPda,
           escrow: escrowPda,
           worker: workerPda,

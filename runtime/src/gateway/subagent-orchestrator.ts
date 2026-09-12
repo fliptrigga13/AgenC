@@ -1634,9 +1634,21 @@ export class SubAgentOrchestrator implements DeterministicPipelineExecutor {
       },
     });
 
+    const startTime = Date.now();
     while (true) {
       const result = input.subAgentManager.getResult(childSessionId);
       if (!result) {
+        if (input.timeoutMs > 0 && Date.now() - startTime >= input.timeoutMs) {
+          return {
+            status: "failed",
+            failure: {
+              failureClass: "timeout",
+              message: `Subagent step "${input.step.name}" timed out after ${input.timeoutMs}ms`,
+              stopReasonHint: "timeout",
+              childSessionId,
+            },
+          };
+        }
         await sleep(this.pollIntervalMs);
         continue;
       }

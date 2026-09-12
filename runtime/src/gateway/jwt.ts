@@ -104,6 +104,20 @@ export function verifyToken(secret: string, token: string): JWTPayload | null {
   const expBuf = Buffer.from(expected, "utf-8");
   if (!timingSafeEqual(sigBuf, expBuf)) return null;
 
+  // Decode and validate header to prevent algorithm agility attacks
+  let decodedHeader: unknown;
+  try {
+    decodedHeader = JSON.parse(base64urlDecode(header));
+  } catch {
+    return null;
+  }
+  if (!decodedHeader || typeof decodedHeader !== "object") return null;
+  const hdr = decodedHeader as Record<string, unknown>;
+  if (hdr.alg !== "HS256") return null;
+  if (hdr.typ !== undefined && (typeof hdr.typ !== "string" || hdr.typ.toUpperCase() !== "JWT")) {
+    return null;
+  }
+
   // Decode and parse payload
   let decoded: unknown;
   try {

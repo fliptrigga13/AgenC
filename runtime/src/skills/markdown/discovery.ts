@@ -199,10 +199,11 @@ export class SkillDiscovery {
     return missing;
   }
 
-  /** Check if a binary is available via `which`. */
+  /** Check if a binary is available via `which` or `where` on Windows. */
   async checkBinary(name: string): Promise<boolean> {
+    const cmd = process.platform === "win32" ? "where" : "which";
     try {
-      await execFileAsync("which", [name]);
+      await execFileAsync(cmd, [name]);
       return true;
     } catch {
       return false;

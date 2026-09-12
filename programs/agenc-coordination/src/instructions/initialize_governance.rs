@@ -48,9 +48,10 @@ pub fn handler(
         CoordinationError::InvalidGovernanceParam
     );
 
-    // Validate execution delay
+    // Validate execution delay (must enforce non-zero timelock, resolving GOVPARAM-001)
     require!(
-        (0..=GovernanceConfig::MAX_EXECUTION_DELAY).contains(&execution_delay),
+        (GovernanceConfig::MIN_EXECUTION_DELAY..=GovernanceConfig::MAX_EXECUTION_DELAY)
+            .contains(&execution_delay),
         CoordinationError::InvalidGovernanceParam
     );
 

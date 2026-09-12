@@ -2,8 +2,13 @@
  * Skills module — PDA helpers, types, and CU budget constants.
  */
 
-import { PublicKey } from "@solana/web3.js";
+import { Connection, Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
+import anchor, { type Program } from "@coral-xyz/anchor";
+import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { PROGRAM_ID, SEEDS } from "./constants.js";
+import { getAccount } from "./anchor-utils.js";
+import { deriveProtocolPda } from "./protocol.js";
+import { toBigInt, toNumber } from "./utils/numeric.js";
 
 // ============================================================================
 // PDA helpers
@@ -120,4 +125,246 @@ export interface PurchaseRecordState {
   pricePaid: bigint;
   timestamp: bigint;
   bump: number;
+}
+
+export interface PurchaseSkillParams {
+  maxPrice: bigint;
+  authorAgent: PublicKey;
+  authorWallet: PublicKey;
+  treasury: PublicKey;
+  priceMint?: PublicKey | null;
+  buyerTokenAccount?: PublicKey | null;
+  authorTokenAccount?: PublicKey | null;
+  treasuryTokenAccount?: PublicKey | null;
+  tokenProgram?: PublicKey | null;
+}
+
+export interface SkillTransactionOptions {
+  skipPreflight?: boolean;
+}
+
+// ============================================================================
+// Instruction Execution Helpers
+// ============================================================================
+
+export async function registerSkill(
+  connection: Connection,
+  program: Program,
+  authority: Keypair,
+  authorAgentPda: PublicKey,
+  params: RegisterSkillParams,
+  options?: SkillTransactionOptions,
+): Promise<{ skillPda: PublicKey; txSignature: string }> {
+  const programId = program.programId;
+  const [skillPda] = deriveSkillPda(authorAgentPda, params.skillId, programId);
+  const protocolPda = deriveProtocolPda(programId);
+
+  const tx = await program.methods
+    .registerSkill(
+      Array.from(params.skillId),
+      Array.from(params.name),
+      Array.from(params.contentHash),
+      new anchor.BN(params.price.toString()),
+      params.priceMint ?? null,
+      Array.from(params.tags),
+    )
+    .accountsPartial({
+      skill: skillPda,
+      author: authorAgentPda,
+      protocolConfig: protocolPda,
+      authority: authority.publicKey,
+      systemProgram: SystemProgram.programId,
+    })
+    .signers([authority])
+    .rpc({ skipPreflight: options?.skipPreflight });
+
+  await connection.confirmTransaction(tx, "confirmed");
+  return { skillPda, txSignature: tx };
+}
+
+export async function updateSkill(
+  connection: Connection,
+  program: Program,
+  authority: Keypair,
+  authorAgentPda: PublicKey,
+  skillId: Uint8Array | Buffer,
+  params: UpdateSkillParams,
+  options?: SkillTransactionOptions,
+): Promise<{ skillPda: PublicKey; txSignature: string }> {
+  const programId = program.programId;
+  const [skillPda] = deriveSkillPda(authorAgentPda, skillId, programId);
+  const protocolPda = deriveProtocolPda(programId);
+
+  const tags = params.tags
+    ? Array.from(params.tags)
+    : Array.from(new Uint8Array(64));
+  const isActive = params.isActive ?? true;
+
+  const tx = await program.methods
+    .updateSkill(
+      Array.from(params.contentHash),
+      new anchor.BN(params.price.toString()),
+      tags,
+      isActive,
+    )
+    .accountsPartial({
+      skill: skillPda,
+      author: authorAgentPda,
+      protocolConfig: protocolPda,
+      authority: authority.publicKey,
+    })
+    .signers([authority])
+    .rpc({ skipPreflight: options?.skipPreflight });
+
+  await connection.confirmTransaction(tx, "confirmed");
+  return { skillPda, txSignature: tx };
+}
+
+export async function purchaseSkill(
+  connection: Connection,
+  program: Program,
+  authority: Keypair,
+  buyerAgentPda: PublicKey,
+  skillPda: PublicKey,
+  params: PurchaseSkillParams,
+  options?: SkillTransactionOptions,
+): Promise<{ purchasePda: PublicKey; txSignature: string }> {
+  const programId = program.programId;
+  const [purchasePda] = deriveSkillPurchasePda(
+    skillPda,
+    buyerAgentPda,
+    programId,
+  );
+  const protocolPda = deriveProtocolPda(programId);
+  const isToken = Boolean(params.priceMint);
+
+  const tx = await program.methods
+    .purchaseSkill(new anchor.BN(params.maxPrice.toString()))
+    .accountsPartial({
+      skill: skillPda,
+      purchaseRecord: purchasePda,
+      buyer: buyerAgentPda,
+      authorAgent: params.authorAgent,
+      authorWallet: params.authorWallet,
+      protocolConfig: protocolPda,
+      treasury: params.treasury,
+      authority: authority.publicKey,
+      systemProgram: SystemProgram.programId,
+      priceMint: params.priceMint ?? null,
+      buyerTokenAccount: params.buyerTokenAccount ?? null,
+      authorTokenAccount: params.authorTokenAccount ?? null,
+      treasuryTokenAccount: params.treasuryTokenAccount ?? null,
+      tokenProgram: isToken ? (params.tokenProgram ?? TOKEN_PROGRAM_ID) : null,
+    } as any)
+    .signers([authority])
+    .rpc({ skipPreflight: options?.skipPreflight });
+
+  await connection.confirmTransaction(tx, "confirmed");
+  return { purchasePda, txSignature: tx };
+}
+
+export async function rateSkill(
+  connection: Connection,
+  program: Program,
+  authority: Keypair,
+  raterAgentPda: PublicKey,
+  skillPda: PublicKey,
+  purchaseRecordPda: PublicKey,
+  params: RateSkillParams,
+  options?: SkillTransactionOptions,
+): Promise<{ ratingPda: PublicKey; txSignature: string }> {
+  const programId = program.programId;
+  const [ratingPda] = deriveSkillRatingPda(
+    skillPda,
+    raterAgentPda,
+    programId,
+  );
+  const protocolPda = deriveProtocolPda(programId);
+  const reviewHash = params.reviewHash
+    ? Array.from(params.reviewHash)
+    : null;
+
+  const tx = await program.methods
+    .rateSkill(params.rating, reviewHash)
+    .accountsPartial({
+      skill: skillPda,
+      ratingAccount: ratingPda,
+      rater: raterAgentPda,
+      purchaseRecord: purchaseRecordPda,
+      protocolConfig: protocolPda,
+      authority: authority.publicKey,
+      systemProgram: SystemProgram.programId,
+    })
+    .signers([authority])
+    .rpc({ skipPreflight: options?.skipPreflight });
+
+  await connection.confirmTransaction(tx, "confirmed");
+  return { ratingPda, txSignature: tx };
+}
+
+// ============================================================================
+// Fetch Helpers
+// ============================================================================
+
+export async function fetchSkill(
+  program: Program,
+  skillPda: PublicKey,
+): Promise<SkillState | null> {
+  const account = await (
+    getAccount(program, "skillRegistration") as any
+  ).fetchNullable(skillPda);
+  if (!account) return null;
+  return {
+    author: account.author as PublicKey,
+    skillId: new Uint8Array(account.skillId),
+    name: new Uint8Array(account.name),
+    contentHash: new Uint8Array(account.contentHash),
+    price: toBigInt(account.price),
+    priceMint: (account.priceMint as PublicKey | null) ?? null,
+    tags: new Uint8Array(account.tags),
+    totalRating: toBigInt(account.totalRating),
+    ratingCount: toNumber(account.ratingCount),
+    downloadCount: toNumber(account.downloadCount),
+    version: toNumber(account.version),
+    isActive: Boolean(account.isActive),
+    createdAt: toBigInt(account.createdAt),
+    updatedAt: toBigInt(account.updatedAt),
+    bump: toNumber(account.bump),
+  };
+}
+
+export async function fetchSkillRating(
+  program: Program,
+  ratingPda: PublicKey,
+): Promise<SkillRatingState | null> {
+  const account = await (
+    getAccount(program, "skillRating") as any
+  ).fetchNullable(ratingPda);
+  if (!account) return null;
+  return {
+    skill: account.skill as PublicKey,
+    rater: account.rater as PublicKey,
+    rating: toNumber(account.rating),
+    reviewHash: account.reviewHash ? new Uint8Array(account.reviewHash) : null,
+    raterReputation: toNumber(account.raterReputation),
+    timestamp: toBigInt(account.timestamp),
+    bump: toNumber(account.bump),
+  };
+}
+
+export async function fetchPurchaseRecord(
+  program: Program,
+  purchasePda: PublicKey,
+): Promise<PurchaseRecordState | null> {
+  const account = await (
+    getAccount(program, "purchaseRecord") as any
+  ).fetchNullable(purchasePda);
+  if (!account) return null;
+  return {
+    skill: account.skill as PublicKey,
+    buyer: account.buyer as PublicKey,
+    pricePaid: toBigInt(account.pricePaid),
+    timestamp: toBigInt(account.timestamp),
+    bump: toNumber(account.bump),
+  };
 }

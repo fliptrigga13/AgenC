@@ -114,6 +114,7 @@ pub fn handler(ctx: Context<PurchaseSkill>, expected_price: u64) -> Result<()> {
         CoordinationError::SkillPriceChanged
     );
     let mut protocol_fee = 0u64;
+    let mut author_share = 0u64;
 
     if price > 0 || skill.price_mint.is_some() {
         if skill.price_mint.is_some() {
@@ -140,13 +141,15 @@ pub fn handler(ctx: Context<PurchaseSkill>, expected_price: u64) -> Result<()> {
                 CoordinationError::InvalidTokenMint
             );
 
-            // Calculate fee
-            protocol_fee = price
-                .checked_mul(config.protocol_fee_bps as u64)
+            // Calculate fee using u128 intermediate to prevent overflow on large prices
+            let fee_u128 = (price as u128)
+                .checked_mul(config.protocol_fee_bps as u128)
                 .ok_or(CoordinationError::ArithmeticOverflow)?
-                .checked_div(BASIS_POINTS_DIVISOR)
+                .checked_div(BASIS_POINTS_DIVISOR as u128)
                 .ok_or(CoordinationError::ArithmeticOverflow)?;
-            let author_share = price
+            protocol_fee = u64::try_from(fee_u128)
+                .map_err(|_| CoordinationError::ArithmeticOverflow)?;
+            author_share = price
                 .checked_sub(protocol_fee)
                 .ok_or(CoordinationError::ArithmeticOverflow)?;
 
@@ -163,11 +166,6 @@ pub fn handler(ctx: Context<PurchaseSkill>, expected_price: u64) -> Result<()> {
             let treasury_ta = ctx
                 .accounts
                 .treasury_token_account
-                .as_ref()
-                .ok_or(CoordinationError::MissingTokenAccounts)?;
-            let token_program = ctx
-                .accounts
-                .token_program
                 .as_ref()
                 .ok_or(CoordinationError::MissingTokenAccounts)?;
 
@@ -199,6 +197,70 @@ pub fn handler(ctx: Context<PurchaseSkill>, expected_price: u64) -> Result<()> {
                 treasury_ta.owner == ctx.accounts.treasury.key(),
                 CoordinationError::InvalidInput
             );
+        } else {
+            // SOL payment path
+            let fee_u128 = (price as u128)
+                .checked_mul(config.protocol_fee_bps as u128)
+                .ok_or(CoordinationError::ArithmeticOverflow)?
+                .checked_div(BASIS_POINTS_DIVISOR as u128)
+                .ok_or(CoordinationError::ArithmeticOverflow)?;
+            protocol_fee = u64::try_from(fee_u128)
+                .map_err(|_| CoordinationError::ArithmeticOverflow)?;
+            author_share = price
+                .checked_sub(protocol_fee)
+                .ok_or(CoordinationError::ArithmeticOverflow)?;
+        }
+    }
+
+    // --- EFFECTS: Update state before external CPI calls (CEI pattern) ---
+    // Update skill download count
+    let skill = &mut ctx.accounts.skill;
+    skill.download_count = skill
+        .download_count
+        .checked_add(1)
+        .ok_or(CoordinationError::ArithmeticOverflow)?;
+
+    // Record purchase
+    let purchase_record = &mut ctx.accounts.purchase_record;
+    purchase_record.skill = skill.key();
+    purchase_record.buyer = buyer.key();
+    purchase_record.price_paid = price;
+    purchase_record.timestamp = clock.unix_timestamp;
+    purchase_record.bump = ctx.bumps.purchase_record;
+    purchase_record._reserved = [0u8; 4];
+
+    emit!(SkillPurchased {
+        skill: skill.key(),
+        buyer: buyer.key(),
+        author: ctx.accounts.author_agent.key(),
+        price_paid: price,
+        protocol_fee,
+        timestamp: clock.unix_timestamp,
+    });
+
+    // --- INTERACTIONS: External transfers via CPI ---
+    if price > 0 || skill.price_mint.is_some() {
+        if skill.price_mint.is_some() {
+            let buyer_ta = ctx
+                .accounts
+                .buyer_token_account
+                .as_ref()
+                .ok_or(CoordinationError::MissingTokenAccounts)?;
+            let author_ta = ctx
+                .accounts
+                .author_token_account
+                .as_ref()
+                .ok_or(CoordinationError::MissingTokenAccounts)?;
+            let treasury_ta = ctx
+                .accounts
+                .treasury_token_account
+                .as_ref()
+                .ok_or(CoordinationError::MissingTokenAccounts)?;
+            let token_program = ctx
+                .accounts
+                .token_program
+                .as_ref()
+                .ok_or(CoordinationError::MissingTokenAccounts)?;
 
             // Transfer author_share to author
             if author_share > 0 {
@@ -230,16 +292,6 @@ pub fn handler(ctx: Context<PurchaseSkill>, expected_price: u64) -> Result<()> {
                 )?;
             }
         } else {
-            // SOL payment path
-            protocol_fee = price
-                .checked_mul(config.protocol_fee_bps as u64)
-                .ok_or(CoordinationError::ArithmeticOverflow)?
-                .checked_div(BASIS_POINTS_DIVISOR)
-                .ok_or(CoordinationError::ArithmeticOverflow)?;
-            let author_share = price
-                .checked_sub(protocol_fee)
-                .ok_or(CoordinationError::ArithmeticOverflow)?;
-
             // Transfer author_share to author wallet
             if author_share > 0 {
                 system_program::transfer(
@@ -269,31 +321,6 @@ pub fn handler(ctx: Context<PurchaseSkill>, expected_price: u64) -> Result<()> {
             }
         }
     }
-
-    // Update skill download count
-    let skill = &mut ctx.accounts.skill;
-    skill.download_count = skill
-        .download_count
-        .checked_add(1)
-        .ok_or(CoordinationError::ArithmeticOverflow)?;
-
-    // Record purchase
-    let purchase_record = &mut ctx.accounts.purchase_record;
-    purchase_record.skill = skill.key();
-    purchase_record.buyer = buyer.key();
-    purchase_record.price_paid = price;
-    purchase_record.timestamp = clock.unix_timestamp;
-    purchase_record.bump = ctx.bumps.purchase_record;
-    purchase_record._reserved = [0u8; 4];
-
-    emit!(SkillPurchased {
-        skill: skill.key(),
-        buyer: buyer.key(),
-        author: ctx.accounts.author_agent.key(),
-        price_paid: price,
-        protocol_fee,
-        timestamp: clock.unix_timestamp,
-    });
 
     Ok(())
 }

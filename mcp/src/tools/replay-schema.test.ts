@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -11,23 +11,46 @@ import {
   ReplayToolErrorSchema,
 } from "./replay-types.js";
 
-const fixturesDir = join(
+const localFixturesDir = join(
   dirname(fileURLToPath(import.meta.url)),
   "__fixtures__",
 );
+const goldenFixturesDir = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "../../tests/fixtures/golden",
+);
 
-function readFixture(name: string): unknown {
-  return JSON.parse(readFileSync(join(fixturesDir, name), "utf8")) as unknown;
+function readFixture(name: string, goldenFallback: string): unknown {
+  const localPath = join(localFixturesDir, name);
+  if (existsSync(localPath)) {
+    return JSON.parse(readFileSync(localPath, "utf8")) as unknown;
+  }
+  const goldenContent = JSON.parse(
+    readFileSync(join(goldenFixturesDir, goldenFallback), "utf8"),
+  ) as { output?: { shape?: unknown } };
+  return goldenContent.output?.shape ?? goldenContent;
 }
 
-const backfillFixture = readFixture("replay-backfill-output.json") as Record<
-  string,
-  unknown
->;
-const compareFixture = readFixture("replay-compare-output.json");
-const incidentFixture = readFixture("replay-incident-output.json");
-const statusFixture = readFixture("replay-status-output.json");
-const errorFixture = readFixture("replay-error-output.json");
+const backfillFixture = readFixture(
+  "replay-backfill-output.json",
+  "mcp-replay-backfill-success.json",
+) as Record<string, unknown>;
+const compareFixture = readFixture(
+  "replay-compare-output.json",
+  "mcp-replay-compare-success.json",
+);
+const incidentFixture = readFixture(
+  "replay-incident-output.json",
+  "mcp-replay-incident-success.json",
+);
+const statusFixture = readFixture(
+  "replay-status-output.json",
+  "mcp-replay-status-success.json",
+);
+const errorFixture = readFixture(
+  "replay-error-output.json",
+  "mcp-replay-backfill-error-slot-window.json",
+);
 
 test("schema contract: backfill fixture", () => {
   const result = ReplayBackfillOutputSchema.safeParse(backfillFixture);

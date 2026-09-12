@@ -357,10 +357,11 @@ export class SessionManager {
 
         switch (strategy) {
           case "truncate": {
-            session.history = history.slice(dropCount);
+            const newlyArrived = session.history.slice(history.length);
+            session.history = [...history.slice(dropCount), ...newlyArrived];
             result = {
               messagesRemoved: dropCount,
-              messagesRetained: keepCount,
+              messagesRetained: keepCount + newlyArrived.length,
               summaryGenerated: false,
               summaryQuality: "not_applicable",
             };
@@ -393,10 +394,11 @@ export class SessionManager {
               role: "system",
               content: summaryText,
             };
-            session.history = [summaryMsg, ...history.slice(dropCount)];
+            const newlyArrived = session.history.slice(history.length);
+            session.history = [summaryMsg, ...history.slice(dropCount), ...newlyArrived];
             result = {
               messagesRemoved: dropCount,
-              messagesRetained: keepCount + 1,
+              messagesRetained: keepCount + 1 + newlyArrived.length,
               summaryGenerated,
               summaryQuality,
               summaryChars: summaryText.length,
@@ -405,12 +407,13 @@ export class SessionManager {
           }
 
           case "summarize": {
+            const newlyArrived = session.history.slice(history.length);
             if (!this.summarizer) {
               // Fall back to truncate
-              session.history = history.slice(dropCount);
+              session.history = [...history.slice(dropCount), ...newlyArrived];
               result = {
                 messagesRemoved: dropCount,
-                messagesRetained: keepCount,
+                messagesRetained: keepCount + newlyArrived.length,
                 summaryGenerated: false,
                 summaryQuality: "not_applicable",
               };
@@ -421,20 +424,21 @@ export class SessionManager {
             const summary = normalizeSummaryText(
               await this.summarizer(toSummarize),
             );
+            const postSummaryNewlyArrived = session.history.slice(history.length);
             if (!hasUsefulSummaryOverlap(summary, toSummarize)) {
-              session.history = history.slice(dropCount);
+              session.history = [...history.slice(dropCount), ...postSummaryNewlyArrived];
               result = {
                 messagesRemoved: dropCount,
-                messagesRetained: keepCount,
+                messagesRetained: keepCount + postSummaryNewlyArrived.length,
                 summaryGenerated: false,
                 summaryQuality: "rejected",
               };
             } else {
               const summaryMsg: LLMMessage = { role: "system", content: summary };
-              session.history = [summaryMsg, ...history.slice(dropCount)];
+              session.history = [summaryMsg, ...history.slice(dropCount), ...postSummaryNewlyArrived];
               result = {
                 messagesRemoved: dropCount,
-                messagesRetained: keepCount + 1,
+                messagesRetained: keepCount + 1 + postSummaryNewlyArrived.length,
                 summaryGenerated: true,
                 summaryQuality: "accepted",
                 summaryChars: summary.length,

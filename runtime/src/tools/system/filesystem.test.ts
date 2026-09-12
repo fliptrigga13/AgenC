@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { resolve } from "node:path";
 import {
   createFilesystemTools,
   safePath,
@@ -103,7 +104,7 @@ describe("safePath", () => {
   it("accepts paths within allowed directories", async () => {
     const result = await safePath("/workspace/file.txt", ALLOWED_PATHS);
     expect(result.safe).toBe(true);
-    expect(result.resolved).toBe("/workspace/file.txt");
+    expect(result.resolved).toBe(resolve("/workspace/file.txt"));
   });
 
   it("expands ~ in target paths before allowlist validation", async () => {
@@ -117,7 +118,7 @@ describe("safePath", () => {
         ["/home/tester/workspace"],
       );
       expect(result.safe).toBe(true);
-      expect(result.resolved).toBe("/home/tester/workspace/file.txt");
+      expect(result.resolved).toBe(resolve("/home/tester/workspace/file.txt"));
     } finally {
       process.env.HOME = previousHome;
       process.env.USERPROFILE = previousUserProfile;
@@ -132,7 +133,7 @@ describe("safePath", () => {
     try {
       const result = await safePath("/home/tester/workspace/file.txt", ["~/workspace"]);
       expect(result.safe).toBe(true);
-      expect(result.resolved).toBe("/home/tester/workspace/file.txt");
+      expect(result.resolved).toBe(resolve("/home/tester/workspace/file.txt"));
     } finally {
       process.env.HOME = previousHome;
       process.env.USERPROFILE = previousUserProfile;
@@ -184,7 +185,7 @@ describe("safePath", () => {
     // /workspace exists, a/b/c do not — should walk up to /workspace and resolve
     mockRealpath.mockImplementation(async (p: string) => {
       const s = String(p);
-      if (s === "/workspace") return "/workspace" as never;
+      if (s === resolve("/workspace")) return resolve("/workspace") as never;
       // Everything deeper fails with ENOENT
       const err = new Error("ENOENT") as NodeJS.ErrnoException;
       err.code = "ENOENT";
@@ -193,15 +194,15 @@ describe("safePath", () => {
 
     const result = await safePath("/workspace/a/b/c/new.txt", ALLOWED_PATHS);
     expect(result.safe).toBe(true);
-    expect(result.resolved).toBe("/workspace/a/b/c/new.txt");
+    expect(result.resolved).toBe(resolve("/workspace/a/b/c/new.txt"));
   });
 
   it("resolves symlinks before allowlist check", async () => {
     // Symlink /workspace/link -> /etc, so /workspace/link/passwd -> /etc/passwd
     mockRealpath.mockImplementation(async (p: string) => {
       const s = String(p);
-      if (s === "/workspace/link/passwd") return "/etc/passwd" as never;
-      if (s === "/workspace") return "/workspace" as never;
+      if (s === resolve("/workspace/link/passwd")) return resolve("/etc/passwd") as never;
+      if (s === resolve("/workspace")) return resolve("/workspace") as never;
       return s as never;
     });
 
@@ -466,7 +467,7 @@ describe("system.writeFile", () => {
 
     expect(result.isError).toBeUndefined();
     expect(parsed.bytesWritten).toBe(5);
-    expect(mockMkdir).toHaveBeenCalledWith("/workspace/subdir", {
+    expect(mockMkdir).toHaveBeenCalledWith(resolve("/workspace/subdir"), {
       recursive: true,
     });
   });
@@ -678,7 +679,7 @@ describe("system.mkdir", () => {
 
     expect(result.isError).toBeUndefined();
     expect(parsed.created).toBe(true);
-    expect(mockMkdir).toHaveBeenCalledWith("/workspace/a/b/c", {
+    expect(mockMkdir).toHaveBeenCalledWith(resolve("/workspace/a/b/c"), {
       recursive: true,
     });
   });
@@ -716,7 +717,7 @@ describe("system.delete", () => {
 
     expect(result.isError).toBeUndefined();
     expect(parsed.deleted).toBe(true);
-    expect(mockRm).toHaveBeenCalledWith("/workspace/old.txt", {
+    expect(mockRm).toHaveBeenCalledWith(resolve("/workspace/old.txt"), {
       recursive: false,
     });
   });
@@ -750,7 +751,7 @@ describe("system.delete", () => {
 
     expect(result.isError).toBeUndefined();
     expect(parsed.deleted).toBe(true);
-    expect(mockRm).toHaveBeenCalledWith("/workspace/somedir", {
+    expect(mockRm).toHaveBeenCalledWith(resolve("/workspace/somedir"), {
       recursive: true,
     });
   });
@@ -1201,7 +1202,7 @@ describe("system.appendFile parent directory creation", () => {
     });
 
     expect(result.isError).toBeUndefined();
-    expect(mockMkdir).toHaveBeenCalledWith("/workspace/new/nested", {
+    expect(mockMkdir).toHaveBeenCalledWith(resolve("/workspace/new/nested"), {
       recursive: true,
     });
   });
@@ -1220,7 +1221,7 @@ describe("safePath dangling-symlink ancestor walk", () => {
     // Simulate: /workspace exists, /workspace/new/file.txt does not
     mockRealpath.mockImplementation(async (p: string) => {
       const s = String(p);
-      if (s === "/workspace") return "/workspace" as never;
+      if (s === resolve("/workspace")) return resolve("/workspace") as never;
       const err = new Error("ENOENT") as NodeJS.ErrnoException;
       err.code = "ENOENT";
       throw err;
@@ -1228,7 +1229,7 @@ describe("safePath dangling-symlink ancestor walk", () => {
 
     const result = await safePath("/workspace/new/file.txt", ALLOWED_PATHS);
     expect(result.safe).toBe(true);
-    expect(result.resolved).toBe("/workspace/new/file.txt");
+    expect(result.resolved).toBe(resolve("/workspace/new/file.txt"));
   });
 
   it("rejects new file when ancestor walk resolves outside sandbox via symlink", async () => {
@@ -1236,8 +1237,8 @@ describe("safePath dangling-symlink ancestor walk", () => {
     // So /workspace/link/new.txt canonicalizes to /etc/new.txt (outside sandbox)
     mockRealpath.mockImplementation(async (p: string) => {
       const s = String(p);
-      if (s === "/workspace") return "/workspace" as never;
-      if (s === "/workspace/link") return "/etc" as never;
+      if (s === resolve("/workspace")) return resolve("/workspace") as never;
+      if (s === resolve("/workspace/link")) return resolve("/etc") as never;
       const err = new Error("ENOENT") as NodeJS.ErrnoException;
       err.code = "ENOENT";
       throw err;

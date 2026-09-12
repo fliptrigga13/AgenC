@@ -12,7 +12,19 @@
 import { createHash } from "node:crypto";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
-import { Connection, PublicKey } from "@solana/web3.js";
+import { Connection, PublicKey, SystemProgram } from "@solana/web3.js";
+import * as anchor from "@coral-xyz/anchor";
+import { AnchorProvider, type Program } from "@coral-xyz/anchor";
+import {
+  PROGRAM_ID,
+  deriveSkillPda,
+  deriveSkillRatingPda,
+  deriveSkillPurchasePda,
+} from "@agenc/sdk";
+import type { AgencCoordination } from "../../types/agenc_coordination.js";
+import { createProgram, createReadOnlyProgram } from "../../idl.js";
+import { findProtocolPda } from "../../agent/pda.js";
+import { SkillPurchaseManager, type PurchaseResult } from "./payment.js";
 import type { Logger } from "../../utils/logger.js";
 import { silentLogger } from "../../utils/logger.js";
 import { derivePda } from "../../utils/pda.js";
@@ -41,12 +53,9 @@ import {
 // ============================================================================
 
 /**
- * Placeholder program ID for the skill registry Solana program.
- * Will be replaced with the real program ID in Phase 6.2.
+ * Program ID for the skill registry Solana program.
  */
-export const SKILL_REGISTRY_PROGRAM_ID = new PublicKey(
-  "6cdqQ8wxWLnHAEJrdw89wJe6ZRdSnTuHfRgDp3r5tZ8K",
-);
+export const SKILL_REGISTRY_PROGRAM_ID = PROGRAM_ID;
 
 /** PDA seed prefix for skill accounts. */
 const SKILL_SEED = Buffer.from("skill");
@@ -193,6 +202,13 @@ export class OnChainSkillRegistryClient implements SkillRegistryClient {
   private readonly contentGateway: string;
   private readonly logger: Logger;
   private readonly fetchFn: typeof fetch;
+  private readonly programId: PublicKey;
+  private readonly authorAgentPda?: PublicKey;
+  private readonly raterAgentPda?: PublicKey;
+  private readonly buyerAgentPda?: PublicKey;
+  private readonly buyerAgentId?: Uint8Array;
+  private readonly program?: Program<AgencCoordination>;
+  private readonly strictOnChain: boolean;
 
   constructor(config: SkillRegistryClientConfig) {
     this.connection = config.connection;
@@ -200,6 +216,31 @@ export class OnChainSkillRegistryClient implements SkillRegistryClient {
     this.contentGateway = config.contentGateway ?? DEFAULT_CONTENT_GATEWAY;
     this.logger = config.logger ?? silentLogger;
     this.fetchFn = config.fetchFn ?? globalThis.fetch;
+    this.programId = config.programId ?? SKILL_REGISTRY_PROGRAM_ID;
+    this.authorAgentPda = config.authorAgentPda;
+    this.raterAgentPda = config.raterAgentPda;
+    this.buyerAgentPda = config.buyerAgentPda;
+    this.buyerAgentId = config.buyerAgentId;
+    this.program = config.program;
+    this.strictOnChain = config.strictOnChain ?? false;
+  }
+
+  /**
+   * Get an Anchor Program instance for instructions.
+   */
+  getAnchorProgram(): Program<AgencCoordination> {
+    if (this.program) {
+      return this.program;
+    }
+    if (this.wallet) {
+      const provider = new AnchorProvider(
+        this.connection,
+        this.wallet as any,
+        { commitment: "confirmed" },
+      );
+      return createProgram(provider, this.programId);
+    }
+    return createReadOnlyProgram(this.connection, this.programId);
   }
 
   /**
@@ -370,18 +411,77 @@ export class OnChainSkillRegistryClient implements SkillRegistryClient {
     const hash = createHash("sha256").update(content).digest("hex");
 
     this.logger.info(`Skill content hash: ${hash}`);
-    this.logger.debug(
-      "IPFS upload deferred to Phase 6.2. " +
-        `Metadata: name="${metadata.name}", tags=[${(metadata.tags ?? []).join(", ")}]`,
-    );
+
+    if (this.authorAgentPda && this.wallet) {
+      try {
+        const program = this.getAnchorProgram();
+        const skillIdBytes = new Uint8Array(32);
+        const nameBytes = new Uint8Array(32);
+        const contentHashBytes = Buffer.from(hash, "hex");
+        const tagsBytes = new Uint8Array(64);
+
+        skillIdBytes.set(contentHashBytes.subarray(0, 32));
+
+        const enc = new TextEncoder();
+        const encodedName = enc.encode(metadata.name);
+        nameBytes.set(encodedName.subarray(0, 32));
+
+        if (metadata.tags && metadata.tags.length > 0) {
+          const tagsStr = metadata.tags.join(",");
+          tagsBytes.set(enc.encode(tagsStr).subarray(0, 64));
+        }
+
+        const price = metadata.priceLamports ?? 0n;
+        const [skillPda] = deriveSkillPda(
+          this.authorAgentPda,
+          skillIdBytes,
+          this.programId,
+        );
+        const protocolPda = findProtocolPda(this.programId);
+
+        await program.methods
+          .registerSkill(
+            Array.from(skillIdBytes),
+            Array.from(nameBytes),
+            Array.from(contentHashBytes),
+            new anchor.BN(price.toString()),
+            null,
+            Array.from(tagsBytes),
+          )
+          .accountsPartial({
+            skill: skillPda,
+            author: this.authorAgentPda,
+            protocolConfig: protocolPda,
+            authority: this.wallet.publicKey,
+            systemProgram: SystemProgram.programId,
+          })
+          .rpc();
+        this.logger.info(
+          `Skill registered on-chain with PDA: ${skillPda.toBase58()}`,
+        );
+      } catch (err) {
+        this.logger.warn(
+          `On-chain skill registration failed: ${err instanceof Error ? err.message : String(err)}`,
+        );
+        if (this.strictOnChain) {
+          throw new SkillPublishError(
+            skillPath,
+            `On-chain registration failed: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        }
+      }
+    } else {
+      this.logger.debug(
+        "On-chain registration skipped (authorAgentPda or wallet not configured). " +
+          `Metadata: name="${metadata.name}", tags=[${(metadata.tags ?? []).join(", ")}]`,
+      );
+    }
 
     return hash;
   }
 
   /**
    * Rate a skill in the registry.
-   *
-   * Note: On-chain instruction is deferred to Phase 6.2.
    */
   async rate(skillId: string, rating: number, review?: string): Promise<void> {
     if (rating < 1 || rating > 5 || !Number.isInteger(rating)) {
@@ -395,7 +495,65 @@ export class OnChainSkillRegistryClient implements SkillRegistryClient {
     this.logger.info(
       `Rating skill "${skillId}": ${rating}/5${review ? ` — "${review}"` : ""}`,
     );
-    this.logger.debug("On-chain rating instruction deferred to Phase 6.2");
+
+    if (this.raterAgentPda) {
+      try {
+        const program = this.getAnchorProgram();
+        let skillPda: PublicKey;
+        try {
+          skillPda = new PublicKey(skillId);
+        } catch {
+          const { address } = derivePda(
+            [SKILL_SEED, Buffer.from(skillId)],
+            this.programId,
+          );
+          skillPda = address;
+        }
+
+        const [ratingPda] = deriveSkillRatingPda(
+          skillPda,
+          this.raterAgentPda,
+          this.programId,
+        );
+        const [purchaseRecordPda] = deriveSkillPurchasePda(
+          skillPda,
+          this.raterAgentPda,
+          this.programId,
+        );
+        const protocolPda = findProtocolPda(this.programId);
+
+        let reviewHash: number[] | null = null;
+        if (review) {
+          const rHash = createHash("sha256").update(review).digest();
+          reviewHash = Array.from(rHash);
+        }
+
+        await program.methods
+          .rateSkill(rating, reviewHash)
+          .accountsPartial({
+            skill: skillPda,
+            ratingAccount: ratingPda,
+            rater: this.raterAgentPda,
+            purchaseRecord: purchaseRecordPda,
+            protocolConfig: protocolPda,
+            authority: this.wallet.publicKey,
+            systemProgram: SystemProgram.programId,
+          })
+          .rpc();
+        this.logger.info(`Skill rated on-chain at PDA: ${ratingPda.toBase58()}`);
+      } catch (err) {
+        this.logger.warn(
+          `On-chain skill rating failed: ${err instanceof Error ? err.message : String(err)}`,
+        );
+        if (this.strictOnChain) {
+          throw err;
+        }
+      }
+    } else {
+      this.logger.debug(
+        "On-chain rating instruction skipped (raterAgentPda not configured)",
+      );
+    }
   }
 
   /**
@@ -452,5 +610,31 @@ export class OnChainSkillRegistryClient implements SkillRegistryClient {
 
     const listing = await this.get(skillId);
     return listing.contentHash === contentHash;
+  }
+
+  /**
+   * Purchase a skill from the registry.
+   */
+  async purchase(
+    skillPda: PublicKey,
+    skillId: string,
+    targetPath: string,
+  ): Promise<PurchaseResult> {
+    const program = this.getAnchorProgram();
+    const agentId = this.buyerAgentId ?? new Uint8Array(32);
+    const manager = new SkillPurchaseManager({
+      program,
+      agentId,
+      registryClient: this,
+      logger: this.logger,
+    });
+    return manager.purchase(skillPda, skillId, targetPath);
+  }
+
+  /**
+   * Configured buyer agent PDA if available.
+   */
+  get buyerAgent(): PublicKey | undefined {
+    return this.buyerAgentPda;
   }
 }

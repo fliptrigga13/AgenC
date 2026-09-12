@@ -13,7 +13,7 @@
  * @module
  */
 
-import { join, resolve } from "node:path";
+import { join, resolve, sep } from "node:path";
 import { tmpdir } from "node:os";
 import { readdir, lstat, unlink } from "node:fs/promises";
 import type { GatewayMessage, MessageAttachment } from "./message.js";
@@ -364,7 +364,7 @@ export class MediaPipeline {
       try {
         const filePath = join(this.config.tempDir, entry);
         const resolvedPath = resolve(filePath);
-        if (!resolvedPath.startsWith(resolvedTempDir + "/")) continue;
+        if (!resolvedPath.startsWith(resolvedTempDir + sep)) continue;
 
         const info = await lstat(filePath);
         if (!info.isFile()) continue;

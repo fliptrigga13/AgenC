@@ -158,9 +158,11 @@ pub fn handler(
         .checked_mul(quorum_factor)
         .ok_or(CoordinationError::ArithmeticOverflow)?;
 
-    // Voting period: use governance config value (capped at MAX), or provided value
+    // Voting period: use governance config value (capped at MAX and floored at governance.voting_period), or provided value
     let effective_voting_period = if voting_period > 0 {
-        voting_period.min(GovernanceConfig::MAX_VOTING_PERIOD)
+        voting_period
+            .min(GovernanceConfig::MAX_VOTING_PERIOD)
+            .max(governance.voting_period)
     } else {
         governance.voting_period
     };

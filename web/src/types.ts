@@ -258,8 +258,86 @@ export type VoiceState = 'inactive' | 'connecting' | 'listening' | 'speaking' | 
 
 export type VoiceMode = 'vad' | 'push-to-talk';
 
+export type ViewId =
+  | 'chat'
+  | 'status'
+  | 'skills'
+  | 'tasks'
+  | 'memory'
+  | 'activity'
+  | 'desktop'
+  | 'settings'
+  | 'payment'
+  | 'marketplace'
+  | 'governance'
+  | 'reputation';
+
 // ============================================================================
-// Navigation
+// On-Chain Skill Marketplace
 // ============================================================================
 
-export type ViewId = 'chat' | 'status' | 'skills' | 'tasks' | 'memory' | 'activity' | 'desktop' | 'settings' | 'payment';
+export interface MarketplaceSkill {
+  id: string;
+  pda: string;
+  name: string;
+  description: string;
+  author: string;
+  authorAgentPda: string;
+  priceLamports: string;
+  priceSol: string;
+  priceMint?: string;
+  tags: string[];
+  rating: number;
+  ratingCount: number;
+  downloads: number;
+  contentHash: string;
+  isActive: boolean;
+  version: number;
+  registeredAt: number;
+  updatedAt: number;
+}
+
+// ============================================================================
+// On-Chain Governance
+// ============================================================================
+
+export interface GovernanceProposal {
+  pda: string;
+  proposer: string;
+  nonce: string;
+  title: string;
+  description: string;
+  proposalType: 'ProtocolUpgrade' | 'FeeChange' | 'TreasurySpend' | 'RateLimitChange';
+  status: 'Active' | 'Executed' | 'Defeated' | 'Cancelled';
+  votesFor: string;
+  votesAgainst: string;
+  totalVoters: number;
+  quorum: string;
+  votingDeadline: number;
+  executionAfter: number;
+  executedAt?: number;
+  createdAt: number;
+  payload?: string;
+}
+
+// ============================================================================
+// Reputation Economy
+// ============================================================================
+
+export interface ReputationStakeInfo {
+  agentPda: string;
+  stakedLamports: string;
+  stakedSol: string;
+  lockedUntil: number;
+  slashCount: number;
+  isUnlocked: boolean;
+}
+
+export interface ReputationDelegationInfo {
+  pda: string;
+  delegatorAgentPda: string;
+  delegateeAgentPda: string;
+  points: number;
+  expiresAt: number;
+  isExpired: boolean;
+}

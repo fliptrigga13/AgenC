@@ -436,7 +436,8 @@ export class SandboxManager {
 
   /** Derives the container name from the scope config and session/key. */
   private containerName(key: string): string {
-    return `${CONTAINER_PREFIX}-${key}`;
+    const sanitizedKey = key.replace(/[^a-zA-Z0-9_.-]/g, "-");
+    return `${CONTAINER_PREFIX}-${sanitizedKey}`;
   }
 
   /** Derives a scope key from the session ID based on the configured scope. */

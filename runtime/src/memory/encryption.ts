@@ -45,10 +45,17 @@ export interface EncryptionProvider {
 export function createAES256GCMProvider(
   config: EncryptionConfig,
 ): EncryptionProvider {
-  const keyBuf =
-    typeof config.key === "string"
-      ? Buffer.from(config.key, "hex")
-      : config.key;
+  let keyBuf: Buffer;
+  if (typeof config.key === "string") {
+    if (!/^[0-9a-fA-F]{64}$/.test(config.key)) {
+      throw new Error(
+        `Encryption key string must be a 64-character hex string (32 bytes), got length ${config.key.length}`,
+      );
+    }
+    keyBuf = Buffer.from(config.key, "hex");
+  } else {
+    keyBuf = config.key;
+  }
 
   if (keyBuf.length !== KEY_BYTES) {
     throw new Error(

@@ -20,21 +20,31 @@ vi.mock("node:fs/promises", () => ({
   mkdir: vi.fn(),
 }));
 
-vi.mock("@agenc/sdk", () => ({
-  silentLogger: {
-    debug: () => {},
-    info: () => {},
-    warn: () => {},
-    error: () => {},
-  },
-  createLogger: () => ({
-    debug: () => {},
-    info: () => {},
-    warn: () => {},
-    error: () => {},
-  }),
-  PROGRAM_ID: new PublicKey("11111111111111111111111111111111"),
-}));
+vi.mock("@agenc/sdk", async (importOriginal) => {
+  const actual = await importOriginal<Record<string, any>>();
+  return {
+    ...actual,
+    silentLogger: {
+      debug: () => {},
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+    },
+    createLogger: () => ({
+      debug: () => {},
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+    }),
+    PROGRAM_ID: new PublicKey("11111111111111111111111111111111"),
+    deriveSkillPda: (author: PublicKey, id: Uint8Array | Buffer, programId: PublicKey = new PublicKey("11111111111111111111111111111111")) =>
+      PublicKey.findProgramAddressSync([Buffer.from("skill"), author.toBuffer(), Buffer.from(id)], programId),
+    deriveSkillRatingPda: (skill: PublicKey, rater: PublicKey, programId: PublicKey = new PublicKey("11111111111111111111111111111111")) =>
+      PublicKey.findProgramAddressSync([Buffer.from("skill_rating"), skill.toBuffer(), rater.toBuffer()], programId),
+    deriveSkillPurchasePda: (skill: PublicKey, buyer: PublicKey, programId: PublicKey = new PublicKey("11111111111111111111111111111111")) =>
+      PublicKey.findProgramAddressSync([Buffer.from("skill_purchase"), skill.toBuffer(), buyer.toBuffer()], programId),
+  };
+});
 
 // Import mocked fs after vi.mock
 const { readFile, writeFile, mkdir } = await import("node:fs/promises");
@@ -769,6 +779,152 @@ describe("OnChainSkillRegistryClient", () => {
       await expect(client.verify("missing", "somehash")).rejects.toThrow(
         SkillRegistryNotFoundError,
       );
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // On-chain integration paths: publish, rate, purchase
+  // --------------------------------------------------------------------------
+
+  describe("on-chain write operations", () => {
+    const validSkillMd =
+      "---\nname: OnChain Skill\ndescription: A test on chain\nversion: 1.0.0\n---\n# OnChain Test";
+
+    it("registers skill on-chain when authorAgentPda, wallet, and program are configured", async () => {
+      vi.mocked(readFile).mockResolvedValue(Buffer.from(validSkillMd));
+
+      const rpcMock = vi.fn().mockResolvedValue("mock-tx-sig");
+      const accountsPartialMock = vi.fn().mockReturnValue({ rpc: rpcMock });
+      const registerSkillMock = vi.fn().mockReturnValue({ accountsPartial: accountsPartialMock });
+
+      const mockProgram = {
+        programId: SKILL_REGISTRY_PROGRAM_ID,
+        methods: {
+          registerSkill: registerSkillMock,
+        },
+      };
+
+      const wallet = {
+        publicKey: Keypair.generate().publicKey,
+        signTransaction: vi.fn(async (tx: unknown) => tx),
+        signAllTransactions: vi.fn(async (txs: unknown) => txs),
+      };
+
+      const authorAgentPda = Keypair.generate().publicKey;
+
+      const client = createClient({
+        wallet,
+        authorAgentPda,
+        program: mockProgram as any,
+      });
+
+      const hash = await client.publish("/path/SKILL.md", {
+        name: "OnChain Skill",
+        description: "A test on chain",
+        tags: ["defi", "solana"],
+        priceLamports: 1000n,
+      });
+
+      expect(typeof hash).toBe("string");
+      expect(registerSkillMock).toHaveBeenCalled();
+      expect(rpcMock).toHaveBeenCalled();
+    });
+
+    it("throws SkillPublishError when on-chain registration fails in strict mode", async () => {
+      vi.mocked(readFile).mockResolvedValue(Buffer.from(validSkillMd));
+
+      const mockProgram = {
+        programId: SKILL_REGISTRY_PROGRAM_ID,
+        methods: {
+          registerSkill: vi.fn().mockReturnValue({
+            accountsPartial: vi.fn().mockReturnValue({
+              rpc: vi.fn().mockRejectedValue(new Error("RPC failure")),
+            }),
+          }),
+        },
+      };
+
+      const wallet = {
+        publicKey: Keypair.generate().publicKey,
+        signTransaction: vi.fn(async (tx: unknown) => tx),
+        signAllTransactions: vi.fn(async (txs: unknown) => txs),
+      };
+
+      const client = createClient({
+        wallet,
+        authorAgentPda: Keypair.generate().publicKey,
+        program: mockProgram as any,
+        strictOnChain: true,
+      });
+
+      await expect(
+        client.publish("/path/SKILL.md", {
+          name: "OnChain Skill",
+          description: "A test on chain",
+        }),
+      ).rejects.toThrow(SkillPublishError);
+    });
+
+    it("rates skill on-chain when raterAgentPda, wallet, and program are configured", async () => {
+      const rpcMock = vi.fn().mockResolvedValue("mock-rate-tx");
+      const accountsPartialMock = vi.fn().mockReturnValue({ rpc: rpcMock });
+      const rateSkillMock = vi.fn().mockReturnValue({ accountsPartial: accountsPartialMock });
+
+      const mockProgram = {
+        programId: SKILL_REGISTRY_PROGRAM_ID,
+        methods: {
+          rateSkill: rateSkillMock,
+        },
+      };
+
+      const wallet = {
+        publicKey: Keypair.generate().publicKey,
+        signTransaction: vi.fn(async (tx: unknown) => tx),
+        signAllTransactions: vi.fn(async (txs: unknown) => txs),
+      };
+
+      const raterAgentPda = Keypair.generate().publicKey;
+      const client = createClient({
+        wallet,
+        raterAgentPda,
+        program: mockProgram as any,
+      });
+
+      const skillPda = Keypair.generate().publicKey;
+      await client.rate(skillPda.toBase58(), 5, "Excellent skill");
+
+      expect(rateSkillMock).toHaveBeenCalledWith(5, expect.any(Array));
+      expect(rpcMock).toHaveBeenCalled();
+    });
+
+    it("throws when on-chain rate fails in strict mode", async () => {
+      const mockProgram = {
+        programId: SKILL_REGISTRY_PROGRAM_ID,
+        methods: {
+          rateSkill: vi.fn().mockReturnValue({
+            accountsPartial: vi.fn().mockReturnValue({
+              rpc: vi.fn().mockRejectedValue(new Error("Rating transaction failed")),
+            }),
+          }),
+        },
+      };
+
+      const wallet = {
+        publicKey: Keypair.generate().publicKey,
+        signTransaction: vi.fn(async (tx: unknown) => tx),
+        signAllTransactions: vi.fn(async (txs: unknown) => txs),
+      };
+
+      const client = createClient({
+        wallet,
+        raterAgentPda: Keypair.generate().publicKey,
+        program: mockProgram as any,
+        strictOnChain: true,
+      });
+
+      await expect(
+        client.rate(Keypair.generate().publicKey.toBase58(), 4),
+      ).rejects.toThrow("Rating transaction failed");
     });
   });
 });

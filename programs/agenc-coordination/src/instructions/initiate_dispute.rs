@@ -249,6 +249,9 @@ pub fn handler(
     // Mark task as disputed
     task.status = TaskStatus::Disputed;
 
+    // Stamp initiator timestamp for deregistration slash window check
+    agent.last_dispute_initiated = clock.unix_timestamp;
+
     // Increment disputes_as_defendant for the bound defendant (fix #544, #842)
     // This is now deterministic and no longer caller-controlled via remaining_accounts.
     if is_creator {

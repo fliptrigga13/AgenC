@@ -36,6 +36,21 @@ import { ActivityFeedView } from './components/activity/ActivityFeedView';
 import { SettingsView } from './components/settings/SettingsView';
 import { PaymentView } from './components/payment/PaymentView';
 import { DesktopView } from './components/desktop/DesktopView';
+import { MarketplaceView } from './components/marketplace/MarketplaceView';
+import { GovernanceView } from './components/governance/GovernanceView';
+import { ReputationView } from './components/reputation/ReputationView';
+import {
+  INITIAL_MARKETPLACE_SKILLS,
+  INITIAL_GOVERNANCE_PROPOSALS,
+  INITIAL_REPUTATION_STAKE,
+  INITIAL_REPUTATION_DELEGATIONS,
+} from './data/onChainData';
+import type {
+  MarketplaceSkill,
+  GovernanceProposal,
+  ReputationStakeInfo,
+  ReputationDelegationInfo,
+} from './types';
 
 const CHAT_COMPOSER_SELECTOR = 'textarea[data-chat-composer="true"]';
 
@@ -223,6 +238,167 @@ export default function App() {
     [approvals],
   );
 
+  // On-Chain Marketplace, Governance, and Reputation state
+  const [marketplaceSkills, setMarketplaceSkills] = useState(INITIAL_MARKETPLACE_SKILLS);
+  const [governanceProposals, setGovernanceProposals] = useState(INITIAL_GOVERNANCE_PROPOSALS);
+  const [reputationStake, setReputationStake] = useState<ReputationStakeInfo | null>(INITIAL_REPUTATION_STAKE);
+  const [reputationDelegations, setReputationDelegations] = useState(INITIAL_REPUTATION_DELEGATIONS);
+
+  const handlePurchaseSkill = useCallback((skill: MarketplaceSkill | string) => {
+    const id = typeof skill === 'string' ? skill : skill.id;
+    setMarketplaceSkills((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, downloads: s.downloads + 1 } : s))
+    );
+  }, []);
+
+  const handleRateSkill = useCallback((skillId: string, rating: number) => {
+    setMarketplaceSkills((prev) =>
+      prev.map((s) => {
+        if (s.id !== skillId) return s;
+        const newCount = s.ratingCount + 1;
+        const newRating = Number(((s.rating * s.ratingCount + rating) / newCount).toFixed(1));
+        return { ...s, rating: newRating, ratingCount: newCount };
+      })
+    );
+  }, []);
+
+  const handlePublishSkill = useCallback(
+    (params: {
+      name: string;
+      description: string;
+      tags: string[];
+      priceSol: string;
+      content: string;
+    }) => {
+      const pseudoId = params.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const pseudoPda = `Mkt${Array.from({ length: 36 }, () => Math.floor(Math.random() * 36).toString(36)).join('')}`;
+      const newSkill: MarketplaceSkill = {
+        id: pseudoId,
+        pda: pseudoPda,
+        name: params.name,
+        description: params.description,
+        tags: params.tags,
+        priceSol: params.priceSol,
+        priceLamports: BigInt(Math.floor(parseFloat(params.priceSol || '0') * 1e9)).toString(),
+        author: 'current-user.sol',
+        authorAgentPda: 'AgntCurrentLocalUserAuthority11111111111111',
+        contentHash: 'bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi',
+        isActive: true,
+        version: 1,
+        rating: 5.0,
+        ratingCount: 1,
+        downloads: 0,
+        registeredAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      setMarketplaceSkills((prev) => [newSkill, ...prev]);
+    },
+    [],
+  );
+
+  const handleVoteProposal = useCallback((proposalPda: string, approve: boolean) => {
+    setGovernanceProposals((prev) =>
+      prev.map((p) => {
+        if (p.pda !== proposalPda) return p;
+        const prevFor = BigInt(p.votesFor);
+        const prevAgainst = BigInt(p.votesAgainst);
+        const addWeight = BigInt('1000000');
+        return {
+          ...p,
+          votesFor: (approve ? prevFor + addWeight : prevFor).toString(),
+          votesAgainst: (!approve ? prevAgainst + addWeight : prevAgainst).toString(),
+          totalVoters: p.totalVoters + 1,
+        };
+      })
+    );
+  }, []);
+
+  const handleExecuteProposal = useCallback((proposalPda: string) => {
+    setGovernanceProposals((prev) =>
+      prev.map((p) => (p.pda === proposalPda ? { ...p, status: 'Executed', executedAt: Date.now() } : p))
+    );
+  }, []);
+
+  const handleCreateProposal = useCallback(
+    (params: {
+      title: string;
+      description: string;
+      proposalType: GovernanceProposal['proposalType'];
+      payload?: string;
+    }) => {
+      const pseudoPda = `Gov${Array.from({ length: 38 }, () => Math.floor(Math.random() * 36).toString(36)).join('')}`;
+      const newProposal: GovernanceProposal = {
+        pda: pseudoPda,
+        proposer: 'AgntCurrentLocalUserAuthority11111111111111',
+        nonce: (Date.now() % 1000).toString(),
+        title: params.title,
+        description: params.description,
+        proposalType: params.proposalType,
+        status: 'Active',
+        votesFor: '1000000',
+        votesAgainst: '0',
+        totalVoters: 1,
+        quorum: '10000000',
+        votingDeadline: Date.now() + 7 * 86400000,
+        executionAfter: Date.now() + 9 * 86400000,
+        createdAt: Date.now(),
+        payload: params.payload,
+      };
+      setGovernanceProposals((prev) => [newProposal, ...prev]);
+    },
+    [],
+  );
+
+  const handleStakeReputation = useCallback((amountSol: string) => {
+    const addedSol = parseFloat(amountSol);
+    if (isNaN(addedSol) || addedSol <= 0) return;
+    setReputationStake((prev) => {
+      const currentSol = prev ? parseFloat(prev.stakedSol) : 0;
+      const totalSol = (currentSol + addedSol).toFixed(2);
+      const lamports = BigInt(Math.floor(parseFloat(totalSol) * 1e9)).toString();
+      return {
+        agentPda: prev?.agentPda ?? 'AgntStkCurrentAuthority11111111111111111',
+        stakedLamports: lamports,
+        stakedSol: totalSol,
+        lockedUntil: Date.now() + 7 * 86400000,
+        slashCount: prev?.slashCount ?? 0,
+        isUnlocked: false,
+      };
+    });
+  }, []);
+
+  const handleWithdrawReputation = useCallback(() => {
+    setReputationStake((prev) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        stakedSol: '0.00',
+        stakedLamports: '0',
+        isUnlocked: true,
+      };
+    });
+  }, []);
+
+  const handleDelegateReputation = useCallback(
+    (params: { delegateePda: string; points: number; durationDays: number }) => {
+      const pseudoPda = `Delg${Array.from({ length: 36 }, () => Math.floor(Math.random() * 36).toString(36)).join('')}`;
+      const newDelegation: ReputationDelegationInfo = {
+        pda: pseudoPda,
+        delegatorAgentPda: reputationStake?.agentPda ?? 'AgntStkCurrentAuthority11111111111111111',
+        delegateeAgentPda: params.delegateePda,
+        points: params.points,
+        expiresAt: Date.now() + params.durationDays * 86400000,
+        isExpired: false,
+      };
+      setReputationDelegations((prev) => [newDelegation, ...prev]);
+    },
+    [reputationStake],
+  );
+
+  const handleRevokeReputationDelegation = useCallback((delegationPda: string) => {
+    setReputationDelegations((prev) => prev.filter((d) => d.pda !== delegationPda));
+  }, []);
+
   return (
     <ErrorBoundary>
       <div className="flex flex-col h-screen bg-bbs-black">
@@ -323,6 +499,32 @@ export default function App() {
           )}
           {currentView === 'payment' && (
             <PaymentView wallet={walletInfo} />
+          )}
+          {currentView === 'marketplace' && (
+            <MarketplaceView
+              skills={marketplaceSkills}
+              onPurchase={handlePurchaseSkill}
+              onRate={handleRateSkill}
+              onPublish={handlePublishSkill}
+            />
+          )}
+          {currentView === 'governance' && (
+            <GovernanceView
+              proposals={governanceProposals}
+              onVote={handleVoteProposal}
+              onExecute={handleExecuteProposal}
+              onCreateProposal={handleCreateProposal}
+            />
+          )}
+          {currentView === 'reputation' && (
+            <ReputationView
+              stakeInfo={reputationStake}
+              delegations={reputationDelegations}
+              onStake={handleStakeReputation}
+              onWithdraw={handleWithdrawReputation}
+              onDelegate={handleDelegateReputation}
+              onRevokeDelegation={handleRevokeReputationDelegation}
+            />
           )}
         </main>
 

@@ -17,6 +17,9 @@ import { registerTestingTools } from "./tools/testing.js";
 import { registerInspectorTools } from "./tools/inspector.js";
 import { registerReplayTools } from "./tools/replay.js";
 import { registerHumanFacingTools } from "./tools/human-facing.js";
+import { registerSkillTools } from "./tools/skills.js";
+import { registerGovernanceTools } from "./tools/governance.js";
+import { registerReputationTools } from "./tools/reputation.js";
 import { registerPrompts } from "./prompts/register.js";
 
 function parseOperatorRole(value: string | undefined): OperatorRole | null {
@@ -150,6 +153,9 @@ export function createServer(): McpServer {
   registerInspectorTools(server);
   registerReplayTools(server);
   registerHumanFacingTools(server);
+  registerSkillTools(server);
+  registerGovernanceTools(server);
+  registerReputationTools(server);
 
   // Register MCP resources
   registerResources(server);

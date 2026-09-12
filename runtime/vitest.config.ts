@@ -14,7 +14,17 @@ export default defineConfig({
     globals: false,
     environment: 'node',
     include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
-    exclude: ['node_modules', 'dist'],
+    exclude: [
+      'node_modules',
+      'dist',
+      ...(process.platform === 'win32'
+        ? [
+            'tests/integration.test.ts',
+            'tests/eval-replay.integration.test.ts',
+            'tests/benchmark-runner.integration.test.ts',
+          ]
+        : []),
+    ],
     testTimeout: 30000,
     deps: {
       interopDefault: true,

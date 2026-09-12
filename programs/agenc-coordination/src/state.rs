@@ -833,6 +833,9 @@ impl GovernanceConfig {
     /// Maximum voting period: 7 days
     pub const MAX_VOTING_PERIOD: i64 = 604_800;
 
+    /// Minimum execution delay: 1 second (timelock protection against instant execution)
+    pub const MIN_EXECUTION_DELAY: i64 = 1;
+
     /// Default execution delay: 1 day
     pub const DEFAULT_EXECUTION_DELAY: i64 = 86_400;
 

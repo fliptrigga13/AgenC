@@ -255,6 +255,16 @@ fn process_cancel_task_impl(ctx: Context<CancelTask>) -> Result<()> {
             worker_info.key() == claim.worker,
             CoordinationError::InvalidInput
         );
+
+        // Validate claim PDA derivation (CANCEL-001 defense-in-depth)
+        let (expected_claim_pda, _) = Pubkey::find_program_address(
+            &[b"claim", task.key().as_ref(), worker_info.key().as_ref()],
+            &crate::ID,
+        );
+        require!(
+            claim_info.key() == expected_claim_pda,
+            CoordinationError::InvalidInput
+        );
         let mut worker_data = worker_info.try_borrow_mut_data()?;
         let mut worker = AgentRegistration::try_deserialize(&mut &worker_data[..])?;
         require!(

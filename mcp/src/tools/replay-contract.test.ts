@@ -349,7 +349,26 @@ async function runContractCase<
   assert.equal(expected.id, args.id);
   assert.equal(expected.version, SNAPSHOT_VERSION);
   assert.equal(expected.output.schema, args.schemaName);
-  assert.deepStrictEqual(expected.output.shape, shape);
+
+  const normalizePathMessages = (val: unknown): unknown => {
+    if (typeof val === "string") {
+      return val.replace(/[A-Za-z]:[\\/]tmp[\\/]/g, "/tmp/").replace(/\\tmp\\/g, "/tmp/");
+    }
+    if (Array.isArray(val)) {
+      return val.map(normalizePathMessages);
+    }
+    if (val && typeof val === "object") {
+      return Object.fromEntries(
+        Object.entries(val).map(([k, v]) => [k, normalizePathMessages(v)]),
+      );
+    }
+    return val;
+  };
+
+  assert.deepStrictEqual(
+    normalizePathMessages(expected.output.shape),
+    normalizePathMessages(shape),
+  );
 }
 
 const baseRecords = [

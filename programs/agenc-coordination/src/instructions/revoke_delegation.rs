@@ -38,6 +38,12 @@ pub fn handler(ctx: Context<RevokeDelegation>) -> Result<()> {
         CoordinationError::DelegationCooldownNotElapsed
     );
 
+    // Verify identity continuity: delegator must have been registered when or before delegation was created
+    require!(
+        ctx.accounts.delegator_agent.registered_at <= ctx.accounts.delegation.created_at,
+        CoordinationError::ReputationAgentNotActive
+    );
+
     // Capture delegation fields before mutable borrow of delegator_agent
     let delegation_amount = ctx.accounts.delegation.amount;
     let delegation_delegator = ctx.accounts.delegation.delegator;

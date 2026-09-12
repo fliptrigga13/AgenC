@@ -4,7 +4,7 @@
  * @module
  */
 
-import type { Connection } from "@solana/web3.js";
+import type { Connection, PublicKey } from "@solana/web3.js";
 import type { Wallet } from "../../types/wallet.js";
 import type { Logger } from "../../utils/logger.js";
 
@@ -64,6 +64,20 @@ export interface SkillRegistryClientConfig {
   readonly logger?: Logger;
   /** Injectable fetch function for testability */
   readonly fetchFn?: typeof fetch;
+  /** Program ID override (defaults to PROGRAM_ID) */
+  readonly programId?: PublicKey;
+  /** Author agent PDA for registering skills */
+  readonly authorAgentPda?: PublicKey;
+  /** Rater agent PDA for rating skills */
+  readonly raterAgentPda?: PublicKey;
+  /** Buyer agent PDA for purchasing skills */
+  readonly buyerAgentPda?: PublicKey;
+  /** Buyer agent ID (32 bytes) */
+  readonly buyerAgentId?: Uint8Array;
+  /** Anchor Program instance (optional) */
+  readonly program?: any;
+  /** Throw errors if on-chain transaction fails instead of warning */
+  readonly strictOnChain?: boolean;
 }
 
 // ============================================================================
@@ -156,4 +170,17 @@ export interface SkillRegistryClient {
    * @returns True if the hash matches
    */
   verify(skillId: string, contentHash: string): Promise<boolean>;
+
+  /**
+   * Purchase a skill from the registry.
+   *
+   * @param skillPda - The on-chain skill PDA
+   * @param skillId - The skill identifier
+   * @param targetPath - Local path to download and install to
+   */
+  purchase?(
+    skillPda: import("@solana/web3.js").PublicKey,
+    skillId: string,
+    targetPath: string,
+  ): Promise<unknown>;
 }

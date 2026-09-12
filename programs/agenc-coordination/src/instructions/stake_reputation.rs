@@ -59,18 +59,7 @@ pub fn handler(ctx: Context<StakeReputation>, amount: u64) -> Result<()> {
         stake.bump = ctx.bumps.reputation_stake;
     }
 
-    // Transfer SOL from authority to stake PDA
-    anchor_lang::system_program::transfer(
-        CpiContext::new(
-            ctx.accounts.system_program.to_account_info(),
-            anchor_lang::system_program::Transfer {
-                from: ctx.accounts.authority.to_account_info(),
-                to: stake.to_account_info(),
-            },
-        ),
-        amount,
-    )?;
-
+    // --- EFFECTS: Update state before external CPI transfer (CEI pattern) ---
     stake.staked_amount = stake
         .staked_amount
         .checked_add(amount)
@@ -88,6 +77,18 @@ pub fn handler(ctx: Context<StakeReputation>, amount: u64) -> Result<()> {
         locked_until: stake.locked_until,
         timestamp: clock.unix_timestamp,
     });
+
+    // --- INTERACTIONS: Transfer SOL from authority to stake PDA ---
+    anchor_lang::system_program::transfer(
+        CpiContext::new(
+            ctx.accounts.system_program.to_account_info(),
+            anchor_lang::system_program::Transfer {
+                from: ctx.accounts.authority.to_account_info(),
+                to: stake.to_account_info(),
+            },
+        ),
+        amount,
+    )?;
 
     Ok(())
 }

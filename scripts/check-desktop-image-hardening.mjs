@@ -54,7 +54,7 @@ async function main() {
     fail('desktop image base must be "ubuntu:24.04"');
   }
 
-  if (!/RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends/.test(dockerfile)) {
+  if (!/(?:RUN\s+|&&\s+)apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends/.test(dockerfile)) {
     fail("missing apt upgrade stage before install");
   }
 

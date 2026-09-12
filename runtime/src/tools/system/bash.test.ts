@@ -1,6 +1,11 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { EventEmitter } from "node:events";
-import { createBashTool, isCommandAllowed, validateShellCommand } from "./bash.js";
+import {
+  createBashTool,
+  isCommandAllowed,
+  validateShellCommand,
+  buildEnv,
+} from "./bash.js";
 import { DEFAULT_DENY_LIST, DEFAULT_DENY_PREFIXES, DANGEROUS_SHELL_PATTERNS } from "./types.js";
 import type { Logger } from "../../utils/logger.js";
 
@@ -496,7 +501,8 @@ describe("system.bash tool", () => {
     expect(passedEnv.HOME).toBeDefined();
     // Should NOT contain arbitrary env vars from parent process
     const keys = Object.keys(passedEnv);
-    expect(keys.length).toBeLessThanOrEqual(2);
+    const maxExpectedKeys = process.platform === "win32" ? 7 : 2;
+    expect(keys.length).toBeLessThanOrEqual(maxExpectedKeys);
   });
 
   it("uses custom env when provided in config", async () => {
@@ -1304,5 +1310,38 @@ describe("isCommandAllowed", () => {
   it('allows ls even though it starts with "l" (no prefix match)', () => {
     const result = isCommandAllowed("ls", new Set(), null);
     expect(result.allowed).toBe(true);
+  });
+});
+
+describe("buildEnv", () => {
+  it("returns custom config env when provided", () => {
+    const custom = { FOO: "bar", PATH: "/custom" };
+    expect(buildEnv(custom)).toBe(custom);
+  });
+
+  it("builds minimal POSIX env with PATH and HOME", () => {
+    const env = buildEnv(undefined, "linux");
+    expect(env.PATH).toBeDefined();
+    expect(env.HOME).toBeDefined();
+    // Sensitive vars must not be leaked
+    expect((env as Record<string, string>).AWS_SECRET_ACCESS_KEY).toBeUndefined();
+    expect((env as Record<string, string>).OPENAI_API_KEY).toBeUndefined();
+  });
+
+  it("builds win32 env with standard platform variables", () => {
+    const originalSystemRoot = process.env.SystemRoot;
+    const originalTemp = process.env.TEMP;
+    try {
+      process.env.SystemRoot = "C:\\Windows";
+      process.env.TEMP = "C:\\Temp";
+      const env = buildEnv(undefined, "win32");
+      expect(env.PATH).toBeDefined();
+      expect(env.SystemRoot).toBe("C:\\Windows");
+      expect(env.TEMP).toBe("C:\\Temp");
+      expect((env as Record<string, string>).AWS_SECRET_ACCESS_KEY).toBeUndefined();
+    } finally {
+      process.env.SystemRoot = originalSystemRoot;
+      process.env.TEMP = originalTemp;
+    }
   });
 });

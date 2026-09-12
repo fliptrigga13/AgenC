@@ -14,17 +14,20 @@ const MENU_ITEMS: { key: string; label: string; view: ViewId }[] = [
   { key: '5', label: 'MEMORY', view: 'memory' },
   { key: '6', label: 'DESKTOP', view: 'desktop' },
   { key: '7', label: 'FEED', view: 'activity' },
+  { key: 'M', label: 'MARKET', view: 'marketplace' },
+  { key: 'G', label: 'GOV', view: 'governance' },
+  { key: 'R', label: 'REPUTE', view: 'reputation' },
   { key: '8', label: 'SETTINGS', view: 'settings' },
   { key: '9', label: 'WALLET', view: 'payment' },
 ];
 
 export function BBSMenuBar({ currentView, onViewChange }: BBSMenuBarProps) {
-  // Keyboard shortcuts: number keys 1-9
+  // Keyboard shortcuts: number keys 1-9, M, G, R
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       // Don't capture when typing in inputs
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      const item = MENU_ITEMS.find((m) => m.key === e.key);
+      const item = MENU_ITEMS.find((m) => m.key.toLowerCase() === e.key.toLowerCase());
       if (item) {
         e.preventDefault();
         onViewChange(item.view);

@@ -77,6 +77,14 @@ function extractHttpStatus(error: unknown): number | undefined {
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   if (typeof error === "string") return error;
+  if (
+    error &&
+    typeof error === "object" &&
+    "message" in error &&
+    typeof (error as { message: unknown }).message === "string"
+  ) {
+    return (error as { message: string }).message;
+  }
   return String(error);
 }
 
@@ -119,6 +127,138 @@ export function isConnectionLevelError(error: unknown): boolean {
     return true;
 
   return matchesPatterns(msg, CONNECTION_LEVEL_PATTERNS);
+}
+
+/** Patterns indicating a transaction was already received and processed by the Solana cluster. */
+const ALREADY_PROCESSED_PATTERNS: readonly string[] = [
+  "already been processed",
+  "Transaction already processed",
+  "already processed",
+];
+
+/**
+ * Classify whether an error indicates the transaction was already processed by the cluster.
+ * Used during write failover to treat duplicate broadcast submissions as confirmed.
+ */
+export function isAlreadyProcessedError(error: unknown): boolean {
+  const msg = getErrorMessage(error);
+  return matchesPatterns(msg, ALREADY_PROCESSED_PATTERNS);
+}
+
+const BASE58_ALPHABET =
+  "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+/**
+ * Zero-dependency Base58 encoder for Solana transaction signatures.
+ */
+export function toBase58(bytes: Uint8Array): string {
+  const digits: number[] = [0];
+  for (let i = 0; i < bytes.length; i++) {
+    for (let j = 0; j < digits.length; j++) {
+      digits[j] <<= 8;
+    }
+    digits[0] += bytes[i];
+    let carry = 0;
+    for (let j = 0; j < digits.length; j++) {
+      digits[j] += carry;
+      carry = (digits[j] / 58) | 0;
+      digits[j] %= 58;
+    }
+    while (carry > 0) {
+      digits.push(carry % 58);
+      carry = (carry / 58) | 0;
+    }
+  }
+  let str = "";
+  for (let i = 0; i < bytes.length && bytes[i] === 0; i++) {
+    str += "1";
+  }
+  for (let i = digits.length - 1; i >= 0; i--) {
+    str += BASE58_ALPHABET[digits[i]];
+  }
+  return str;
+}
+
+/**
+ * Zero-dependency Base58 decoder for Solana wire payloads and signatures.
+ */
+export function fromBase58(str: string): Uint8Array | null {
+  try {
+    const bytes: number[] = [0];
+    for (let i = 0; i < str.length; i++) {
+      const char = str[i];
+      const value = BASE58_ALPHABET.indexOf(char);
+      if (value === -1) return null;
+      for (let j = 0; j < bytes.length; j++) {
+        bytes[j] *= 58;
+      }
+      bytes[0] += value;
+      let carry = 0;
+      for (let j = 0; j < bytes.length; j++) {
+        bytes[j] += carry;
+        carry = bytes[j] >> 8;
+        bytes[j] &= 0xff;
+      }
+      while (carry > 0) {
+        bytes.push(carry & 0xff);
+        carry >>= 8;
+      }
+    }
+    for (let i = 0; i < str.length && str[i] === "1"; i++) {
+      bytes.push(0);
+    }
+    return new Uint8Array(bytes.reverse());
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Extract the primary transaction signature from RPC call arguments for write methods.
+ *
+ * In Solana JSON-RPC `sendTransaction`:
+ * `args[0]` is the base64-encoded wire transaction (or Buffer/Uint8Array).
+ * In `sendEncodedTransaction`:
+ * `args[0]` can be base64 or base58.
+ * The wire format begins with a compact-u16 signature count, followed by 64-byte signatures.
+ * The first signature is the fee-payer / transaction signature.
+ */
+export function extractSignatureFromArgs(args: unknown[]): string | null {
+  try {
+    if (!args || args.length === 0) return null;
+    const raw = args[0];
+    const opts = args[1] as { encoding?: string } | undefined;
+    let bytes: Uint8Array | null = null;
+    if (typeof raw === "string") {
+      if (opts?.encoding === "base58") {
+        bytes = fromBase58(raw);
+      } else {
+        bytes = Buffer.from(raw, "base64");
+      }
+    } else if (raw instanceof Uint8Array || Buffer.isBuffer(raw)) {
+      bytes = raw;
+    }
+    if (!bytes || bytes.length < 65) return null;
+
+    let offset = 0;
+    const firstByte = bytes[offset++];
+    let numSignatures = 0;
+    if ((firstByte & 0x80) === 0) {
+      numSignatures = firstByte;
+    } else {
+      if (bytes.length < 66) return null;
+      const secondByte = bytes[offset++];
+      numSignatures = (firstByte & 0x7f) | ((secondByte & 0x7f) << 7);
+    }
+
+    if (numSignatures > 0 && bytes.length >= offset + 64) {
+      const sigBytes = bytes.subarray(offset, offset + 64);
+      return toBase58(sigBytes);
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 // ============================================================================

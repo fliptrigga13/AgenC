@@ -141,22 +141,25 @@ pub fn handler(ctx: Context<ExpireClaim>) -> Result<()> {
     );
 
     // Transfer cleanup reward from escrow to caller (fix #531)
-    let remaining_funds = escrow
-        .amount
-        .checked_sub(escrow.distributed)
-        .ok_or(CoordinationError::ArithmeticOverflow)?;
-
-    let reward = CLEANUP_REWARD.min(remaining_funds);
-    if reward > 0 {
-        transfer_lamports(
-            &escrow.to_account_info(),
-            &ctx.accounts.authority.to_account_info(),
-            reward,
-        )?;
-        escrow.distributed = escrow
-            .distributed
-            .checked_add(reward)
+    // For SPL token tasks, escrow holds only rent-exempt lamports which cannot be debited without violating rent exemption.
+    if task.reward_mint.is_none() {
+        let remaining_funds = escrow
+            .amount
+            .checked_sub(escrow.distributed)
             .ok_or(CoordinationError::ArithmeticOverflow)?;
+
+        let reward = CLEANUP_REWARD.min(remaining_funds);
+        if reward > 0 {
+            transfer_lamports(
+                &escrow.to_account_info(),
+                &ctx.accounts.authority.to_account_info(),
+                reward,
+            )?;
+            escrow.distributed = escrow
+                .distributed
+                .checked_add(reward)
+                .ok_or(CoordinationError::ArithmeticOverflow)?;
+        }
     }
 
     // Decrement task worker count

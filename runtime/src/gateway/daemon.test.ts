@@ -528,8 +528,8 @@ describe("ensureChromiumCompatShims", () => {
         "utf-8",
       );
 
-      expect(chromiumShim).toContain(`exec "${chromePath}" "$@"`);
-      expect(chromiumBrowserShim).toContain(`exec "${chromePath}" "$@"`);
+      expect(chromiumShim).toContain(`exec ${JSON.stringify(chromePath)} "$@"`);
+      expect(chromiumBrowserShim).toContain(`exec ${JSON.stringify(chromePath)} "$@"`);
     } finally {
       await rm(tempHome, { recursive: true, force: true });
     }
@@ -588,7 +588,7 @@ describe("ensureAgencRuntimeShim", () => {
 
       expect(shimDir).toBe(join(tempHome, ".agenc", "bin"));
       const shim = await readFile(join(shimDir!, "agenc-runtime"), "utf-8");
-      expect(shim).toContain(`exec "${runtimeEntry}" "$@"`);
+      expect(shim).toContain(`exec ${JSON.stringify(runtimeEntry)} "$@"`);
     } finally {
       await rm(tempHome, { recursive: true, force: true });
     }
@@ -645,8 +645,10 @@ describe("PID file operations", () => {
     const pidPath = join(tempDir, "perms.pid");
     await writePidFile({ pid: 1, port: 80, configPath: "/c" }, pidPath);
     const st = await stat(pidPath);
-    // eslint-disable-next-line no-bitwise
-    expect(st.mode & 0o777).toBe(0o600);
+    if (process.platform !== "win32") {
+      // eslint-disable-next-line no-bitwise
+      expect(st.mode & 0o777).toBe(0o600);
+    }
   });
 
   it("writePidFile creates parent directories", async () => {
@@ -1179,10 +1181,12 @@ describe("DaemonManager", () => {
   });
 
   it("start cleans up gateway if writePidFile fails", async () => {
-    // Use a path under /dev/null which cannot be a directory
+    // Create a regular file so using it as a directory component fails on all OSes
+    const blockedFile = join(tempDir, "not-a-dir");
+    await writeFile(blockedFile, "block");
     const dm = new DaemonManager({
       configPath: "/tmp/config.json",
-      pidPath: "/dev/null/impossible/path.pid",
+      pidPath: join(blockedFile, "impossible", "path.pid"),
     });
     vi.spyOn(dm, "setupSignalHandlers").mockImplementation(() => {});
 

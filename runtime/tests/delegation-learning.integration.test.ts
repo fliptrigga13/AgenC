@@ -50,10 +50,26 @@ class FastSubAgentManager {
     const id = `sub-${++this.seq}`;
     this.results.set(id, {
       sessionId: id,
-      output: JSON.stringify({ status: "ok", task: config.task.slice(0, 24) }),
+      output: JSON.stringify({ status: "ok", coverage: 100, task: config.task.slice(0, 24) }),
       success: true,
       durationMs: 15,
-      toolCalls: [],
+      toolCalls: (config.tools && config.tools.length > 0)
+        ? config.tools.map((name, idx) => ({
+            id: `call-${idx}`,
+            name,
+            input: {},
+            output: "ok",
+            durationMs: 5,
+          }))
+        : [
+            {
+              id: "call-1",
+              name: "system.readFile",
+              input: {},
+              output: "ok",
+              durationMs: 5,
+            },
+          ],
       tokenUsage: {
         promptTokens: 40,
         completionTokens: 20,
