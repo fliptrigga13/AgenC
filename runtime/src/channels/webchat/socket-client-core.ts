@@ -66,9 +66,23 @@ export function serializeAuthMessage(token: string): string {
   return JSON.stringify({ type: "auth", payload: { token } });
 }
 
+export function safeStringifyMessage(value: unknown): string {
+  try {
+    return JSON.stringify(value, (_key, val) =>
+      typeof val === "bigint" ? val.toString() : val,
+    );
+  } catch {
+    return JSON.stringify({ type: "error", error: "Serialization failed" });
+  }
+}
+
 export function parseJsonMessage(raw: unknown): unknown {
   if (typeof raw !== "string") return raw;
-  return JSON.parse(raw);
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return raw;
+  }
 }
 
 export type GatewayControlMessageKind =

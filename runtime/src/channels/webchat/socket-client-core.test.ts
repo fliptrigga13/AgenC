@@ -4,6 +4,7 @@ import {
   enqueueBounded,
   flushQueueIfOpen,
   parseJsonMessage,
+  safeStringifyMessage,
   serializeAuthMessage,
   serializePingMessage,
 } from "./socket-client-core.js";
@@ -45,8 +46,16 @@ describe("socket-client-core", () => {
     );
   });
 
-  it("parses JSON strings and passes through non-strings", () => {
+  it("parses JSON strings, passes through non-strings, and handles malformed strings gracefully", () => {
     expect(parseJsonMessage("{\"ok\":true}")).toEqual({ ok: true });
     expect(parseJsonMessage({ ok: true })).toEqual({ ok: true });
+    expect(parseJsonMessage("not valid json")).toBe("not valid json");
+  });
+
+  it("safely stringifies BigInt values without throwing", () => {
+    const payload = { lamports: 1000000000n, nested: { value: 42n } };
+    const serialized = safeStringifyMessage(payload);
+    expect(serialized).toBe(JSON.stringify({ lamports: "1000000000", nested: { value: "42" } }));
   });
 });
+

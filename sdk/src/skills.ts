@@ -155,6 +155,9 @@ export async function registerSkill(
   params: RegisterSkillParams,
   options?: SkillTransactionOptions,
 ): Promise<{ skillPda: PublicKey; txSignature: string }> {
+  if (params.price < 0n) {
+    throw new Error("Skill price must be non-negative");
+  }
   const programId = program.programId;
   const [skillPda] = deriveSkillPda(authorAgentPda, params.skillId, programId);
   const protocolPda = deriveProtocolPda(programId);
@@ -191,6 +194,9 @@ export async function updateSkill(
   params: UpdateSkillParams,
   options?: SkillTransactionOptions,
 ): Promise<{ skillPda: PublicKey; txSignature: string }> {
+  if (params.price < 0n) {
+    throw new Error("Skill price must be non-negative");
+  }
   const programId = program.programId;
   const [skillPda] = deriveSkillPda(authorAgentPda, skillId, programId);
   const protocolPda = deriveProtocolPda(programId);
@@ -229,6 +235,9 @@ export async function purchaseSkill(
   params: PurchaseSkillParams,
   options?: SkillTransactionOptions,
 ): Promise<{ purchasePda: PublicKey; txSignature: string }> {
+  if (params.maxPrice < 0n) {
+    throw new Error("Skill maxPrice must be non-negative");
+  }
   const programId = program.programId;
   const [purchasePda] = deriveSkillPurchasePda(
     skillPda,
@@ -273,6 +282,13 @@ export async function rateSkill(
   params: RateSkillParams,
   options?: SkillTransactionOptions,
 ): Promise<{ ratingPda: PublicKey; txSignature: string }> {
+  if (
+    !Number.isInteger(params.rating) ||
+    params.rating < 1 ||
+    params.rating > 5
+  ) {
+    throw new Error("Rating must be an integer between 1 and 5");
+  }
   const programId = program.programId;
   const [ratingPda] = deriveSkillRatingPda(
     skillPda,

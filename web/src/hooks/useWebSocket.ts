@@ -9,6 +9,7 @@ import {
   enqueueBounded,
   flushQueueIfOpen,
   parseJsonMessage,
+  safeStringifyMessage,
   serializeAuthMessage,
   serializePingMessage,
 } from '../../../runtime/src/channels/webchat/socket-client-core';
@@ -184,7 +185,7 @@ export function useWebSocket(options?: UseWebSocketOptions): UseWebSocketReturn 
   }, [clearReconnect, flushQueue, startPing, stopPing, url]);
 
   const send = useCallback((msg: Record<string, unknown>) => {
-    const payload = JSON.stringify(msg);
+    const payload = safeStringifyMessage(msg);
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(payload);
       return;
