@@ -424,4 +424,59 @@ describe("SessionIsolationManager", () => {
     expect(ctx.policyEngine).toBe(customEngine);
     expect(factory).toHaveBeenCalledOnce();
   });
+
+  it("destroyContext safely cancels and cleans up in-flight context creations", async () => {
+    const memoryBackend = new InMemoryBackend();
+    const closeSpy = vi.spyOn(memoryBackend, "close");
+    let resolveWorkspace: (ws: any) => void;
+    const slowWorkspaceManager = {
+      load: vi.fn(() => new Promise((resolve) => { resolveWorkspace = resolve; })),
+    };
+
+    const mgr = makeManager({
+      workspaceManager: slowWorkspaceManager as any,
+      createMemoryBackend: () => memoryBackend,
+    });
+
+    // Start getContext — will hang on slowWorkspaceManager.load
+    const getPromise = mgr.getContext("ws-slow");
+    expect(mgr.listActiveContexts()).toEqual([]);
+
+    // Trigger destroyContext while creation is pending
+    const destroyPromise = mgr.destroyContext("ws-slow");
+
+    // Unblock the load promise
+    resolveWorkspace!({ id: "ws-slow", skills: [] });
+
+    await Promise.all([getPromise, destroyPromise]);
+
+    // Memory backend must have been closed, and context must not be active
+    expect(closeSpy).toHaveBeenCalledOnce();
+    expect(mgr.listActiveContexts()).toEqual([]);
+  });
+
+  it("destroyAll tears down both active and pending contexts", async () => {
+    const b1 = new InMemoryBackend();
+    const b2 = new InMemoryBackend();
+    const spy1 = vi.spyOn(b1, "close");
+    const spy2 = vi.spyOn(b2, "close");
+
+    let count = 0;
+    const mgr = makeManager({
+      createMemoryBackend: () => {
+        count++;
+        return count === 1 ? b1 : b2;
+      },
+    });
+
+    await mgr.getContext("ws-a");
+    await mgr.getContext("ws-b");
+    expect(mgr.listActiveContexts()).toHaveLength(2);
+
+    await mgr.destroyAll();
+    expect(mgr.listActiveContexts()).toHaveLength(0);
+    expect(spy1).toHaveBeenCalledOnce();
+    expect(spy2).toHaveBeenCalledOnce();
+  });
 });
+

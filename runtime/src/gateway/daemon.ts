@@ -2064,13 +2064,7 @@ export class DaemonManager {
     this._sessionIsolationManager = null;
     if (!isolationManager) return;
 
-    const activeContexts = isolationManager.listActiveContexts();
-    if (activeContexts.length === 0) return;
-    await Promise.allSettled(
-      activeContexts.map((contextKey) =>
-        isolationManager.destroyContext(contextKey),
-      ),
-    );
+    await isolationManager.destroyAll();
   }
 
   private async configureSubAgentInfrastructure(

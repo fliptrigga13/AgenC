@@ -144,6 +144,9 @@ export class SqliteReplayTimelineStore implements ReplayTimelineStore {
   async query(
     filter: ReplayTimelineQuery = {},
   ): Promise<ReadonlyArray<ReplayTimelineRecord>> {
+    if (filter.limit === 0) {
+      return [];
+    }
     const db = await this.getDb();
 
     const queryParts = ["1 = 1"];

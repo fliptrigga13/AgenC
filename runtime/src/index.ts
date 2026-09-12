@@ -1512,6 +1512,16 @@ export {
   type ScheduledJob,
   type HeartbeatActionDef,
   type HeartbeatContext,
+  HeartbeatScheduler,
+  HeartbeatStateError,
+  HeartbeatActionError,
+  HeartbeatTimeoutError,
+  defaultHeartbeatConfig,
+  type HeartbeatConfig,
+  type HeartbeatAction,
+  type HeartbeatResult,
+  type HeartbeatRunSummary,
+  type HeartbeatSchedulerOptions,
   // Channel plugin (Phase 1.5)
   PluginCatalog,
   WebhookRouter,
@@ -1948,3 +1958,7 @@ export {
   createGoalExecutorAction,
   type GoalExecutorActionConfig,
 } from "./autonomous/goal-executor-action.js";
+
+// Replay Timeline and Backfill Subsystem
+export * from "./replay/index.js";
+
