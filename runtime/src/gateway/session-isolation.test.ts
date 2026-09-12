@@ -243,6 +243,34 @@ describe("SessionIsolationManager", () => {
     expect(closeSpy).toHaveBeenCalledOnce();
   });
 
+  it("destroyContext on root workspace cascades and destroys all child subagent contexts", async () => {
+    const mgr = makeManager();
+    const rootCtx = await mgr.getContext("ws-a");
+    const sub1 = await mgr.getContext({
+      workspaceId: "ws-a",
+      parentSessionId: "parent-1",
+      subagentSessionId: "subagent-1",
+    });
+    const sub2 = await mgr.getContext({
+      workspaceId: "ws-a",
+      parentSessionId: "parent-1",
+      subagentSessionId: "subagent-2",
+    });
+
+    const rootCloseSpy = vi.spyOn(rootCtx.memoryBackend, "close");
+    const sub1CloseSpy = vi.spyOn(sub1.memoryBackend, "close");
+    const sub2CloseSpy = vi.spyOn(sub2.memoryBackend, "close");
+
+    expect(mgr.listActiveContexts()).toHaveLength(3);
+
+    await mgr.destroyContext("ws-a");
+
+    expect(rootCloseSpy).toHaveBeenCalledOnce();
+    expect(sub1CloseSpy).toHaveBeenCalledOnce();
+    expect(sub2CloseSpy).toHaveBeenCalledOnce();
+    expect(mgr.listActiveContexts()).toHaveLength(0);
+  });
+
   // --- Active contexts tracking --------------------------------------------
 
   it("listActiveContexts tracks created and destroyed", async () => {

@@ -49,7 +49,6 @@ interface MutableJob {
 }
 
 const MS_PER_MINUTE = 60_000;
-const MS_PER_DAY = 86_400_000;
 const MAX_LOOKAHEAD_DAYS = 366;
 
 // ---------------------------------------------------------------------------
@@ -208,11 +207,16 @@ export function nextCronMatch(schedule: CronSchedule, after?: Date): Date {
   start.setSeconds(0, 0);
   start.setTime(start.getTime() + MS_PER_MINUTE);
 
-  const candidate = new Date(start.getTime());
-
   for (let dayOffset = 0; dayOffset < MAX_LOOKAHEAD_DAYS; dayOffset++) {
-    candidate.setTime(start.getTime() + dayOffset * MS_PER_DAY);
-    candidate.setHours(0, 0, 0, 0);
+    const candidate = new Date(
+      start.getFullYear(),
+      start.getMonth(),
+      start.getDate() + dayOffset,
+      0,
+      0,
+      0,
+      0,
+    );
 
     // Check month
     if (!schedule.month.includes(candidate.getMonth() + 1)) {
@@ -250,10 +254,7 @@ export function nextCronMatch(schedule: CronSchedule, after?: Date): Date {
         }
 
         // Verify month hasn't rolled (e.g. day 31 in a 30-day month)
-        if (
-          candidate.getMonth() + 1 !==
-          schedule.month.find((m) => m === candidate.getMonth() + 1)
-        ) {
+        if (!schedule.month.includes(candidate.getMonth() + 1)) {
           continue;
         }
 
@@ -286,6 +287,11 @@ export class CronScheduler {
   addJob(name: string, cron: string, action: HeartbeatActionDef): void {
     if (this.jobs.has(name)) {
       throw new Error(`job "${name}" already exists`);
+    }
+    if (!action || typeof action.execute !== "function") {
+      throw new Error(
+        `failed to schedule job "${name}": action.execute must be a function`,
+      );
     }
 
     let schedule: CronSchedule;
@@ -381,8 +387,16 @@ export class CronScheduler {
       logger: this.logger,
     };
 
-    await job.action.execute(context);
-    job.lastRun = Date.now();
+    try {
+      await job.action.execute(context);
+    } finally {
+      job.lastRun = Date.now();
+      try {
+        job.nextRun = nextCronMatch(job.schedule).getTime();
+      } catch {
+        // preserve existing nextRun if recomputation fails
+      }
+    }
   }
 
   listJobs(): readonly ScheduledJob[] {
@@ -445,7 +459,12 @@ export class CronScheduler {
 
       job.action
         .execute(context)
-        .then(() => {
+        .catch((error: unknown) => {
+          this.logger.error(
+            `job "${job.name}" failed: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        })
+        .finally(() => {
           if (mutableJob) {
             mutableJob.lastRun = Date.now();
             try {
@@ -457,13 +476,6 @@ export class CronScheduler {
               );
             }
           }
-        })
-        .catch((error: unknown) => {
-          this.logger.error(
-            `job "${job.name}" failed: ${error instanceof Error ? error.message : String(error)}`,
-          );
-        })
-        .finally(() => {
           this.running.delete(job.name);
         });
     }

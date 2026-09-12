@@ -171,6 +171,7 @@ export class ReplayEventBridge {
   private readonly sourceEventLastSlot = new Map<string, number>();
   private intakeSequence = 0;
   private running = false;
+  private readonly inFlightIngests = new Set<Promise<void>>();
 
   private constructor(
     program: Program<AgencCoordination>,
@@ -269,8 +270,11 @@ export class ReplayEventBridge {
     if (!this.running) {
       return;
     }
-    await this.monitor.stop();
     this.running = false;
+    await this.monitor.stop();
+    if (this.inFlightIngests.size > 0) {
+      await Promise.allSettled([...this.inFlightIngests]);
+    }
     this.logger.info("Replay bridge stopped");
   }
 
@@ -319,6 +323,9 @@ export class ReplayEventBridge {
 
   private capture(eventName: (typeof EVENT_MONITOR_EVENT_NAMES)[number]) {
     return (event: unknown, slot: number, signature: string): void => {
+      if (!this.running) {
+        return;
+      }
       const sequence = this.intakeSequence++;
       const traceContext = buildReplayTraceContext({
         traceId: this.tracing.traceId ?? this.traceId,
@@ -329,18 +336,25 @@ export class ReplayEventBridge {
         sampleRate: this.traceSampleRate,
       });
 
-      void this.ingest({
+      const ingestPromise = this.ingest({
         eventName,
         event,
         slot,
         signature,
         sourceEventSequence: sequence,
         traceContext,
-      }).catch((error) => {
-        this.logger.warn(
-          `Replay projection failed for ${eventName} event in slot ${slot}: ${error}`,
-        );
       });
+
+      this.inFlightIngests.add(ingestPromise);
+      ingestPromise
+        .catch((error) => {
+          this.logger.warn(
+            `Replay projection failed for ${eventName} event in slot ${slot}: ${error}`,
+          );
+        })
+        .finally(() => {
+          this.inFlightIngests.delete(ingestPromise);
+        });
     };
   }
 

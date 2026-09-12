@@ -437,4 +437,41 @@ describe("CronScheduler", () => {
     // We verify the guard indirectly: getDueJobs returns matching jobs.
     expect(callCount).toBe(2);
   });
+
+  it("throws when adding a job with invalid action", () => {
+    expect(() =>
+      scheduler.addJob("bad-action", "* * * * *", null as unknown as HeartbeatActionDef),
+    ).toThrow("action.execute must be a function");
+
+    expect(() =>
+      scheduler.addJob("bad-execute", "* * * * *", { name: "bad" } as unknown as HeartbeatActionDef),
+    ).toThrow("action.execute must be a function");
+  });
+
+  it("triggerJob advances lastRun and nextRun even when execution fails", async () => {
+    scheduler.addJob(
+      "failing-job",
+      "*/15 * * * *",
+      makeAction(async () => {
+        throw new Error("action error");
+      }),
+    );
+
+    const initialNextRun = scheduler.listJobs()[0].nextRun;
+    await expect(scheduler.triggerJob("failing-job")).rejects.toThrow("action error");
+
+    const jobs = scheduler.listJobs();
+    expect(jobs[0].lastRun).toBeDefined();
+    expect(jobs[0].nextRun).toBeGreaterThanOrEqual(initialNextRun);
+  });
+
+  it("nextCronMatch handles leap year February 29 correctly", () => {
+    // 2028 is a leap year; 0 0 29 2 * matches Feb 29
+    const schedule = parseCron("0 0 29 2 *");
+    const after = new Date(2028, 0, 1, 0, 0, 0); // Jan 1, 2028
+    const next = nextCronMatch(schedule, after);
+    expect(next.getFullYear()).toBe(2028);
+    expect(next.getMonth()).toBe(1); // February (0-indexed)
+    expect(next.getDate()).toBe(29);
+  });
 });

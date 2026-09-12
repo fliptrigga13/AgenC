@@ -31,12 +31,14 @@ async function runSessionSandboxStress() {
   class MockMemoryBackend {
     constructor(id) {
       this.id = id;
+      this.isClosed = false;
       createdBackends.add(id);
     }
     async initialize() {}
     async saveMessages() {}
     async getMessages() { return []; }
     async close() {
+      this.isClosed = true;
       closedBackends.add(this.id);
     }
   }
@@ -164,6 +166,31 @@ async function runSessionSandboxStress() {
 
   await subAgentMgr.destroyAll();
   console.log(`  [PASS] Sub-agent hierarchical contexts strictly isolated with 0 state bleed.`);
+
+  // Verify cascading destruction: destroying a root workspace must close and remove all child subagent contexts
+  const cascadeParent = await subAgentMgr.getContext({ workspaceId: 'ws-cascade' });
+  const cascadeChild1 = await subAgentMgr.getContext({
+    workspaceId: 'ws-cascade',
+    parentSessionId: 'parent-sess',
+    subagentSessionId: 'child-1',
+  });
+  const cascadeChild2 = await subAgentMgr.getContext({
+    workspaceId: 'ws-cascade',
+    parentSessionId: 'parent-sess',
+    subagentSessionId: 'child-2',
+  });
+
+  console.log(`  Created root workspace 'ws-cascade' and 2 child subagents (active: ${subAgentMgr.listActiveContexts().length})`);
+  await subAgentMgr.destroyContext('ws-cascade'); // Cascade destroy root workspace
+  const activeAfterCascade = subAgentMgr.listActiveContexts();
+  console.log(`  Active contexts after root workspace destruction: ${activeAfterCascade.length} (Must be 0)`);
+  if (activeAfterCascade.length !== 0) {
+    throw new Error(`Cascading destruction failed! Child contexts leaked after root destruction: ${activeAfterCascade}`);
+  }
+  if (!cascadeParent.memoryBackend.isClosed || !cascadeChild1.memoryBackend.isClosed || !cascadeChild2.memoryBackend.isClosed) {
+    throw new Error(`Memory backends were not closed during cascading destruction!`);
+  }
+  console.log(`  [PASS] Cascading destruction cleans up all child subagents and closes memory backends.`);
 
   // --------------------------------------------------------------------------
   // Test 3: Filesystem Path Traversal Security Fuzzing

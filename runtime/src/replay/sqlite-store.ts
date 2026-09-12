@@ -63,6 +63,10 @@ export class SqliteReplayTimelineStore implements ReplayTimelineStore {
   async save(
     records: readonly ReplayTimelineRecord[],
   ): Promise<ReplayStorageWriteResult> {
+    if (records.length === 0) {
+      return { inserted: 0, duplicates: 0 };
+    }
+
     const db = await this.getDb();
     const insert = db.prepare(`
       INSERT OR IGNORE INTO replay_timeline_events (
@@ -101,34 +105,40 @@ export class SqliteReplayTimelineStore implements ReplayTimelineStore {
       )
     `);
 
-    let inserted = 0;
-    let duplicates = 0;
+    const insertBatch = db.transaction(
+      (batch: readonly ReplayTimelineRecord[]) => {
+        let ins = 0;
+        let dup = 0;
+        for (const event of batch) {
+          const result = insert.run({
+            slot: event.slot,
+            signature: event.signature,
+            sourceEventName: event.sourceEventName,
+            sourceEventType: event.sourceEventType,
+            sourceEventSequence: event.sourceEventSequence,
+            seq: event.seq,
+            taskPda: event.taskPda,
+            disputePda: event.disputePda ?? null,
+            timestampMs: event.timestampMs,
+            projectionHash: event.projectionHash,
+            traceId: event.traceId ?? null,
+            traceSpanId: event.traceSpanId ?? null,
+            traceParentSpanId: event.traceParentSpanId ?? null,
+            traceSampled: event.traceSampled === true ? 1 : 0,
+            payload: JSON.stringify(event.payload),
+          });
 
-    for (const event of records) {
-      const result = insert.run({
-        slot: event.slot,
-        signature: event.signature,
-        sourceEventName: event.sourceEventName,
-        sourceEventType: event.sourceEventType,
-        sourceEventSequence: event.sourceEventSequence,
-        seq: event.seq,
-        taskPda: event.taskPda,
-        disputePda: event.disputePda ?? null,
-        timestampMs: event.timestampMs,
-        projectionHash: event.projectionHash,
-        traceId: event.traceId ?? null,
-        traceSpanId: event.traceSpanId ?? null,
-        traceParentSpanId: event.traceParentSpanId ?? null,
-        traceSampled: event.traceSampled === true ? 1 : 0,
-        payload: JSON.stringify(event.payload),
-      });
+          if (result.changes === 1) {
+            ins += 1;
+          } else {
+            dup += 1;
+          }
+        }
+        return { inserted: ins, duplicates: dup };
+      },
+    );
 
-      if (result.changes === 1) {
-        inserted += 1;
-      } else {
-        duplicates += 1;
-      }
-    }
+    const { inserted, duplicates } = insertBatch(records);
 
     await this.applyRetentionPolicy(db);
 

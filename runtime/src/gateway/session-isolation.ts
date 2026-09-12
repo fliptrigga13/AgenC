@@ -166,40 +166,69 @@ export class SessionIsolationManager {
     return promise;
   }
 
-  async destroyContext(context: SessionContextRef): Promise<void> {
+  async destroyContext(
+    context: SessionContextRef,
+    options: { cascade?: boolean } = {},
+  ): Promise<void> {
+    const cascade = options.cascade ?? true;
     const normalized = normalizeContextIdentity(context);
     const cacheKey = contextIdentityKey(normalized);
+    const isRootWorkspace =
+      !normalized.parentSessionId && !normalized.subagentSessionId;
 
-    const inflight = this.pending.get(cacheKey);
-    if (inflight) {
-      try {
-        const ctx = await inflight;
-        await ctx.memoryBackend.close();
-      } catch {
-        // Pending creation failed or was rejected; nothing to close
-      } finally {
-        this.contexts.delete(cacheKey);
+    const keysToDestroy: string[] = [cacheKey];
+
+    if (cascade && isRootWorkspace) {
+      const prefix = `workspace=${normalized.workspaceId}|`;
+      for (const k of this.contexts.keys()) {
+        if (k.startsWith(prefix) && !keysToDestroy.includes(k)) {
+          keysToDestroy.push(k);
+        }
       }
-      this.logger.info(
-        `In-flight session context cancelled and destroyed for workspace '${normalized.workspaceId}' (${cacheKey})`,
-      );
-      return;
+      for (const k of this.pending.keys()) {
+        if (k.startsWith(prefix) && !keysToDestroy.includes(k)) {
+          keysToDestroy.push(k);
+        }
+      }
     }
 
-    const ctx = this.contexts.get(cacheKey);
-    if (!ctx) return;
+    await Promise.allSettled(
+      keysToDestroy.map(async (key) => {
+        const inflight = this.pending.get(key);
+        if (inflight) {
+          try {
+            const ctx = await inflight;
+            await ctx.memoryBackend.close();
+          } catch {
+            // Pending creation failed or was rejected; nothing to close
+          } finally {
+            this.contexts.delete(key);
+            this.pending.delete(key);
+          }
+          this.logger.info(
+            `In-flight session context cancelled and destroyed for key '${key}'`,
+          );
+          return;
+        }
 
-    await ctx.memoryBackend.close();
-    this.contexts.delete(cacheKey);
-    this.logger.info(
-      `Session context destroyed for workspace '${normalized.workspaceId}' (${cacheKey})`,
+        const ctx = this.contexts.get(key);
+        if (!ctx) return;
+
+        await ctx.memoryBackend.close();
+        this.contexts.delete(key);
+        this.logger.info(
+          `Session context destroyed for key '${key}'`,
+        );
+      }),
     );
   }
 
   async destroyAll(): Promise<void> {
     const allKeys = new Set([...this.contexts.keys(), ...this.pending.keys()]);
     await Promise.allSettled(
-      Array.from(allKeys).map((cacheKey) => this.destroyContext(cacheKey)),
+      Array.from(allKeys).map((cacheKey) =>
+        this.destroyContext(cacheKey, { cascade: false }),
+      ),
     );
   }
 

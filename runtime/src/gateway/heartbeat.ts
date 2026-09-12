@@ -103,6 +103,28 @@ export interface HeartbeatSchedulerOptions {
   readonly sendToChannels?: (content: string) => Promise<void>;
 }
 
+function getHourInTimezone(date: Date, timezone?: string): number {
+  if (!timezone) {
+    return date.getHours();
+  }
+  try {
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      hour: "numeric",
+      hour12: false,
+    });
+    const parts = formatter.formatToParts(date);
+    const hourPart = parts.find((p) => p.type === "hour");
+    if (hourPart) {
+      const parsed = parseInt(hourPart.value, 10);
+      return parsed === 24 ? 0 : parsed;
+    }
+  } catch {
+    // If timezone is invalid or unsupported, fallback to local date.getHours()
+  }
+  return date.getHours();
+}
+
 // ============================================================================
 // Default config
 // ============================================================================
@@ -286,9 +308,9 @@ export class HeartbeatScheduler {
   isWithinActiveHours(now?: Date): boolean {
     if (!this.config.activeHours) return true;
 
-    const { start, end } = this.config.activeHours;
+    const { start, end, timezone } = this.config.activeHours;
     const date = now ?? new Date();
-    const hour = date.getHours();
+    const hour = getHourInTimezone(date, timezone);
 
     if (start <= end) {
       // Normal range, e.g. 8-22

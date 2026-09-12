@@ -588,6 +588,62 @@ describe("HeartbeatScheduler", () => {
   });
 
   // --------------------------------------------------------------------------
+  // Active hours
+  // --------------------------------------------------------------------------
+
+  describe("isWithinActiveHours", () => {
+    it("returns true when activeHours is not configured", () => {
+      const scheduler = new HeartbeatScheduler(makeConfig());
+      expect(scheduler.isWithinActiveHours()).toBe(true);
+    });
+
+    it("evaluates standard range within active hours", () => {
+      const scheduler = new HeartbeatScheduler(
+        makeConfig({
+          activeHours: { start: 9, end: 17 },
+        }),
+      );
+      const at10 = new Date(2026, 2, 1, 10, 0, 0);
+      const at20 = new Date(2026, 2, 1, 20, 0, 0);
+      expect(scheduler.isWithinActiveHours(at10)).toBe(true);
+      expect(scheduler.isWithinActiveHours(at20)).toBe(false);
+    });
+
+    it("evaluates wrap-around range correctly", () => {
+      const scheduler = new HeartbeatScheduler(
+        makeConfig({
+          activeHours: { start: 22, end: 6 },
+        }),
+      );
+      const at23 = new Date(2026, 2, 1, 23, 0, 0);
+      const at3 = new Date(2026, 2, 1, 3, 0, 0);
+      const at12 = new Date(2026, 2, 1, 12, 0, 0);
+      expect(scheduler.isWithinActiveHours(at23)).toBe(true);
+      expect(scheduler.isWithinActiveHours(at3)).toBe(true);
+      expect(scheduler.isWithinActiveHours(at12)).toBe(false);
+    });
+
+    it("respects configured timezone", () => {
+      // 2026-03-01T15:00:00Z is 10:00 AM EST (UTC-5) and 00:00 JST (UTC+9)
+      const date = new Date("2026-03-01T15:00:00Z");
+
+      const nyScheduler = new HeartbeatScheduler(
+        makeConfig({
+          activeHours: { start: 9, end: 17, timezone: "America/New_York" },
+        }),
+      );
+      const tokyoScheduler = new HeartbeatScheduler(
+        makeConfig({
+          activeHours: { start: 9, end: 17, timezone: "Asia/Tokyo" },
+        }),
+      );
+
+      expect(nyScheduler.isWithinActiveHours(date)).toBe(true);
+      expect(tokyoScheduler.isWithinActiveHours(date)).toBe(false);
+    });
+  });
+
+  // --------------------------------------------------------------------------
   // Default config
   // --------------------------------------------------------------------------
 

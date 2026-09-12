@@ -196,10 +196,16 @@ export function buildEnv(
   if (isWin) {
     const sysRoot = process.env.SystemRoot ?? process.env.SYSTEMROOT;
     if (sysRoot) env.SystemRoot = sysRoot;
+    const sysDrive = process.env.SystemDrive ?? process.env.SYSTEMDRIVE;
+    if (sysDrive) env.SystemDrive = sysDrive;
+    const comSpec = process.env.ComSpec ?? process.env.COMSPEC;
+    if (comSpec) env.ComSpec = comSpec;
     if (process.env.TEMP) env.TEMP = process.env.TEMP;
     if (process.env.TMP) env.TMP = process.env.TMP;
     if (process.env.USERPROFILE) env.USERPROFILE = process.env.USERPROFILE;
     if (process.env.PATHEXT) env.PATHEXT = process.env.PATHEXT;
+    if (process.env.APPDATA) env.APPDATA = process.env.APPDATA;
+    if (process.env.LOCALAPPDATA) env.LOCALAPPDATA = process.env.LOCALAPPDATA;
   }
 
   return env;

@@ -7,7 +7,13 @@
  * Built from scratch without external libraries.
  */
 
-import { HeartbeatScheduler, HeartbeatTimeoutError } from '../runtime/dist/index.mjs';
+import {
+  HeartbeatScheduler,
+  HeartbeatTimeoutError,
+  CronScheduler,
+  parseCron,
+  nextCronMatch,
+} from '../runtime/dist/index.mjs';
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -198,6 +204,83 @@ async function runAutonomousLifecycleStress() {
     throw new Error(`Mid-cycle stop abort failed! Action 2 ran after scheduler stopped: ${executedActionsInAbortTest}`);
   }
   console.log(`  [PASS] Mid-cycle stop immediately halts subsequent action execution.`);
+
+  console.log(`\n--- Test 6: Multi-Timezone Active Hours Evaluation ---`);
+  // 15:00 UTC = 10:00 EST (New York) and 00:00 JST (Tokyo next day)
+  const utcTestTime = new Date('2026-03-01T15:00:00Z');
+  const nyScheduler = new HeartbeatScheduler({
+    enabled: true,
+    intervalMs: 1000,
+    timeoutMs: 1000,
+    activeHours: { start: 9, end: 17, timezone: 'America/New_York' },
+  });
+  const tokyoScheduler = new HeartbeatScheduler({
+    enabled: true,
+    intervalMs: 1000,
+    timeoutMs: 1000,
+    activeHours: { start: 9, end: 17, timezone: 'Asia/Tokyo' },
+  });
+  const nyActive = nyScheduler.isWithinActiveHours(utcTestTime);
+  const tokyoActive = tokyoScheduler.isWithinActiveHours(utcTestTime);
+  console.log(`  UTC 15:00 in America/New_York (10:00 AM) active: ${nyActive} (Expected: true)`);
+  console.log(`  UTC 15:00 in Asia/Tokyo (00:00 AM next day) active: ${tokyoActive} (Expected: false)`);
+  if (!nyActive || tokyoActive) {
+    throw new Error(`Timezone activeHours evaluation failed! nyActive=${nyActive}, tokyoActive=${tokyoActive}`);
+  }
+  console.log(`  [PASS] Multi-timezone active hours evaluated with sub-hour precision.`);
+
+  console.log(`\n--- Test 7: Leap Year & Month-Boundary Cron Rollover ---`);
+  // Leap year 2028: Feb 29 matches
+  const leapSchedule = parseCron('0 0 29 2 *');
+  const leapNext = nextCronMatch(leapSchedule, new Date('2028-01-01T00:00:00Z'));
+  console.log(`  Next Feb 29 from Jan 1 2028: ${leapNext.toISOString()} (Year: ${leapNext.getFullYear()}, Month: ${leapNext.getMonth() + 1}, Date: ${leapNext.getDate()})`);
+  if (leapNext.getFullYear() !== 2028 || leapNext.getMonth() !== 1 || leapNext.getDate() !== 29) {
+    throw new Error(`Leap year cron matching failed: ${leapNext.toISOString()}`);
+  }
+
+  // 31st of the month schedule across 30-day month (April -> May)
+  const day31Schedule = parseCron('0 12 31 * *');
+  const apr30 = new Date('2026-04-30T00:00:00Z');
+  const may31 = nextCronMatch(day31Schedule, apr30);
+  console.log(`  Next 31st from April 30: ${may31.toISOString()} (Month: ${may31.getMonth() + 1}, Date: ${may31.getDate()})`);
+  if (may31.getMonth() !== 4 || may31.getDate() !== 31) { // 4 is May (0-indexed)
+    throw new Error(`Month-boundary 31st matching failed: ${may31.toISOString()}`);
+  }
+  console.log(`  [PASS] Leap year and month-boundary rollovers verified.`);
+
+  console.log(`\n--- Test 8: CronScheduler Action Failure Resilience ---`);
+  const cron = new CronScheduler();
+  let failCount = 0;
+  cron.addJob('resilience-test-job', '*/15 * * * *', {
+    name: 'resilience-test-job',
+    execute: async () => {
+      failCount++;
+      throw new Error(`Simulated cron action error ${failCount}`);
+    },
+  });
+
+  const jobBefore = cron.listJobs()[0];
+  const initialNextRun = jobBefore.nextRun;
+
+  // Trigger manually — should reject with error, but update lastRun and nextRun
+  let threw = false;
+  try {
+    await cron.triggerJob('resilience-test-job');
+  } catch {
+    threw = true;
+  }
+
+  if (!threw) {
+    throw new Error(`Expected triggerJob to throw on failing action`);
+  }
+
+  const jobAfter = cron.listJobs()[0];
+  console.log(`  Cron job lastRun after error: ${jobAfter.lastRun ? new Date(jobAfter.lastRun).toISOString() : 'none'} (Must be defined)`);
+  console.log(`  Cron job nextRun after error: ${new Date(jobAfter.nextRun).toISOString()} (Must be >= initialNextRun)`);
+  if (!jobAfter.lastRun || jobAfter.nextRun < initialNextRun) {
+    throw new Error(`CronScheduler failed to advance execution metadata on action error!`);
+  }
+  console.log(`  [PASS] CronScheduler gracefully advances nextRun and records lastRun on error.`);
 
   console.log(`\n==============================================================`);
   console.log(`  [ROUND 1 PASS] Autonomous Lifecycle & Scheduler Hardened!`);

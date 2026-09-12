@@ -501,7 +501,7 @@ describe("system.bash tool", () => {
     expect(passedEnv.HOME).toBeDefined();
     // Should NOT contain arbitrary env vars from parent process
     const keys = Object.keys(passedEnv);
-    const maxExpectedKeys = process.platform === "win32" ? 7 : 2;
+    const maxExpectedKeys = process.platform === "win32" ? 11 : 2;
     expect(keys.length).toBeLessThanOrEqual(maxExpectedKeys);
   });
 
@@ -1330,17 +1330,25 @@ describe("buildEnv", () => {
 
   it("builds win32 env with standard platform variables", () => {
     const originalSystemRoot = process.env.SystemRoot;
+    const originalSystemDrive = process.env.SystemDrive;
+    const originalComSpec = process.env.ComSpec;
     const originalTemp = process.env.TEMP;
     try {
       process.env.SystemRoot = "C:\\Windows";
+      process.env.SystemDrive = "C:";
+      process.env.ComSpec = "C:\\Windows\\system32\\cmd.exe";
       process.env.TEMP = "C:\\Temp";
       const env = buildEnv(undefined, "win32");
       expect(env.PATH).toBeDefined();
       expect(env.SystemRoot).toBe("C:\\Windows");
+      expect(env.SystemDrive).toBe("C:");
+      expect(env.ComSpec).toBe("C:\\Windows\\system32\\cmd.exe");
       expect(env.TEMP).toBe("C:\\Temp");
       expect((env as Record<string, string>).AWS_SECRET_ACCESS_KEY).toBeUndefined();
     } finally {
       process.env.SystemRoot = originalSystemRoot;
+      process.env.SystemDrive = originalSystemDrive;
+      process.env.ComSpec = originalComSpec;
       process.env.TEMP = originalTemp;
     }
   });

@@ -166,6 +166,52 @@ async function runReplayTimelineStress() {
   }
   console.log(`  [PASS] Non-positive limit guard verified.`);
 
+  console.log(`\n--- Test 7: Empty Batch Early-Exit Invariant ---`);
+  const emptyRes = await store.save([]);
+  console.log(`  Empty batch save result: inserted=${emptyRes.inserted}, duplicates=${emptyRes.duplicates}`);
+  if (emptyRes.inserted !== 0 || emptyRes.duplicates !== 0) {
+    throw new Error(`Empty batch save failed: expected {inserted: 0, duplicates: 0}`);
+  }
+  console.log(`  [PASS] Empty batch early exit verified.`);
+
+  console.log(`\n--- Test 8: High-Concurrency Multi-Batch Write Stress (db.transaction) ---`);
+  // Generate 10 concurrent batches of 100 distinct records each (1000 records total)
+  const concurrentBatches = [];
+  for (let b = 0; b < 10; b++) {
+    const batchRecords = [];
+    for (let i = 0; i < 100; i++) {
+      const idx = 10000 + b * 100 + i;
+      batchRecords.push({
+        seq: idx,
+        type: 'taskCompleted',
+        taskPda: `ConcurrentTask_${idx}`,
+        timestampMs: 1700000000000 + idx,
+        payload: { batch: b, item: i },
+        slot: 5000 + b,
+        signature: `SIG_CONCURRENT_${b}_${i}`,
+        sourceEventName: 'taskCompleted',
+        sourceEventSequence: idx,
+        sourceEventType: 'taskCompleted',
+        projectionHash: `hash_concurrent_${b}_${i}`,
+      });
+    }
+    concurrentBatches.push(batchRecords);
+  }
+
+  const concurrentStart = performance.now();
+  const batchResults = await Promise.all(
+    concurrentBatches.map((batch) => store.save(batch))
+  );
+  const concurrentElapsed = performance.now() - concurrentStart;
+
+  const concurrentInserted = batchResults.reduce((sum, r) => sum + r.inserted, 0);
+  console.log(`  Saved 10 concurrent batches (1,000 records total) in ${concurrentElapsed.toFixed(1)}ms`);
+  console.log(`  Total inserted across all concurrent transactions: ${concurrentInserted}`);
+  if (concurrentInserted !== 1000) {
+    throw new Error(`Concurrent transactions write mismatch: expected 1000, got ${concurrentInserted}`);
+  }
+  console.log(`  [PASS] High-concurrency transactional batch ingestion verified.`);
+
   // Clean up
   try {
     unlinkSync(testDbPath);
