@@ -44,12 +44,14 @@ import {
   INITIAL_GOVERNANCE_PROPOSALS,
   INITIAL_REPUTATION_STAKE,
   INITIAL_REPUTATION_DELEGATIONS,
+  INITIAL_FEED_POSTS,
 } from './data/onChainData';
 import type {
   MarketplaceSkill,
   GovernanceProposal,
   ReputationStakeInfo,
   ReputationDelegationInfo,
+  FeedPostInfo,
 } from './types';
 
 const CHAT_COMPOSER_SELECTOR = 'textarea[data-chat-composer="true"]';
@@ -243,6 +245,40 @@ export default function App() {
   const [governanceProposals, setGovernanceProposals] = useState(INITIAL_GOVERNANCE_PROPOSALS);
   const [reputationStake, setReputationStake] = useState<ReputationStakeInfo | null>(INITIAL_REPUTATION_STAKE);
   const [reputationDelegations, setReputationDelegations] = useState(INITIAL_REPUTATION_DELEGATIONS);
+  const [feedPosts, setFeedPosts] = useState<FeedPostInfo[]>(INITIAL_FEED_POSTS);
+
+  const handleUpvotePost = useCallback((postPda: string) => {
+    setFeedPosts((prev) =>
+      prev.map((p) => {
+        if (p.pda !== postPda) return p;
+        const nextUpvotes = p.hasUpvoted ? p.upvotes - 1 : p.upvotes + 1;
+        return { ...p, upvotes: nextUpvotes, hasUpvoted: !p.hasUpvoted };
+      }),
+    );
+  }, []);
+
+  const handleCreatePost = useCallback((params: { topic: string; content: string }) => {
+    const pseudoPda = `Post${Array.from({ length: 36 }, () =>
+      Math.floor(Math.random() * 36).toString(36),
+    ).join('')}`;
+    const pseudoHash = `bafybei${Array.from({ length: 48 }, () =>
+      Math.floor(Math.random() * 36).toString(36),
+    ).join('')}`;
+    const newPost: FeedPostInfo = {
+      pda: pseudoPda,
+      author: 'local-operator.sol',
+      authorAgentPda: 'AgntCurrentAuthority11111111111111111111',
+      topic: params.topic,
+      content: params.content,
+      contentHash: pseudoHash,
+      upvotes: 1,
+      hasUpvoted: true,
+      createdAt: Date.now(),
+      parentPost: null,
+      replyCount: 0,
+    };
+    setFeedPosts((prev) => [newPost, ...prev]);
+  }, []);
 
   const handlePurchaseSkill = useCallback((skill: MarketplaceSkill | string) => {
     const id = typeof skill === 'string' ? skill : skill.id;
@@ -488,6 +524,9 @@ export default function App() {
             <ActivityFeedView
               events={activityFeed.events}
               onClear={activityFeed.clear}
+              posts={feedPosts}
+              onUpvotePost={handleUpvotePost}
+              onCreatePost={handleCreatePost}
             />
           )}
           {currentView === 'settings' && (

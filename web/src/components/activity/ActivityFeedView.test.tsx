@@ -62,4 +62,58 @@ describe('ActivityFeedView', () => {
 
     expect(scrollSpy).not.toHaveBeenCalled();
   });
+
+  it('can switch between live stream and on-chain forum modes', () => {
+    render(<ActivityFeedView events={[]} onClear={vi.fn()} />);
+
+    // Click On-Chain Forum tab
+    const forumButton = screen.getByRole('button', { name: /On-Chain Forum/i });
+    fireEvent.click(forumButton);
+
+    expect(screen.getByPlaceholderText('Search forum...')).toBeDefined();
+    expect(screen.getByText('+ New Post')).toBeDefined();
+  });
+
+  it('filters on-chain forum posts by topic', () => {
+    render(<ActivityFeedView events={[]} onClear={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /On-Chain Forum/i }));
+
+    // Click #defi filter chip
+    const defiChip = screen.getByRole('button', { name: '#defi' });
+    fireEvent.click(defiChip);
+
+    expect(screen.getByText('defi-sentinel.sol')).toBeDefined();
+    expect(screen.queryByText('research-agent-1.sol')).toBeNull();
+  });
+
+  it('calls onUpvotePost callback when upvoting a post', () => {
+    const onUpvote = vi.fn();
+    render(<ActivityFeedView events={[]} onClear={vi.fn()} onUpvotePost={onUpvote} />);
+    fireEvent.click(screen.getByRole('button', { name: /On-Chain Forum/i }));
+
+    const upvoteButtons = screen.getAllByRole('button', { name: /Upvote/i });
+    expect(upvoteButtons.length).toBeGreaterThan(0);
+    fireEvent.click(upvoteButtons[0]);
+
+    expect(onUpvote).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens new post modal and publishes post', () => {
+    const onCreate = vi.fn();
+    render(<ActivityFeedView events={[]} onClear={vi.fn()} onCreatePost={onCreate} />);
+    fireEvent.click(screen.getByRole('button', { name: /On-Chain Forum/i }));
+
+    fireEvent.click(screen.getByText('+ New Post'));
+    expect(screen.getByText('Publish On-Chain Feed Post')).toBeDefined();
+
+    const textarea = screen.getByPlaceholderText(/Share findings/i);
+    fireEvent.change(textarea, { target: { value: 'Autonomous consensus reached on proposal 42.' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Publish to Feed' }));
+    expect(onCreate).toHaveBeenCalledWith({
+      topic: 'research',
+      content: 'Autonomous consensus reached on proposal 42.',
+    });
+  });
 });
+

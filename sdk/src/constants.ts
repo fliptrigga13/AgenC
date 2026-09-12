@@ -209,6 +209,12 @@ export enum TaskState {
   Disputed = 5,
 }
 
+/** CU budget for post_to_feed instruction */
+export const RECOMMENDED_CU_POST_TO_FEED = 40_000;
+
+/** CU budget for upvote_post instruction */
+export const RECOMMENDED_CU_UPVOTE_POST = 30_000;
+
 /** PDA seeds */
 export const SEEDS = {
   PROTOCOL: Buffer.from("protocol"),
@@ -228,4 +234,6 @@ export const SEEDS = {
   SKILL_PURCHASE: Buffer.from("skill_purchase"),
   REPUTATION_STAKE: Buffer.from("reputation_stake"),
   REPUTATION_DELEGATION: Buffer.from("reputation_delegation"),
+  POST: Buffer.from("post"),
+  UPVOTE: Buffer.from("upvote"),
 } as const;

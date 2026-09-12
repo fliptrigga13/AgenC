@@ -134,6 +134,8 @@ export {
   RECOMMENDED_CU_INITIATE_DISPUTE,
   RECOMMENDED_CU_VOTE_DISPUTE,
   RECOMMENDED_CU_RESOLVE_DISPUTE,
+  RECOMMENDED_CU_POST_TO_FEED,
+  RECOMMENDED_CU_UPVOTE_POST,
   // Token-path CU constants
   RECOMMENDED_CU_CREATE_TASK_TOKEN,
   RECOMMENDED_CU_COMPLETE_TASK_TOKEN,
@@ -249,6 +251,9 @@ export {
   hasDependents,
   getDisputesByActor,
   getReplayHealthCheck,
+  getTaskByPda,
+  getTaskDependencyTree,
+  sortTaskDependencyDag,
   // Field offsets for memcmp filtering (for custom queries)
   TASK_FIELD_OFFSETS,
   DISPUTE_FIELD_OFFSETS,
@@ -259,6 +264,8 @@ export {
   ReplayTimelineRecord,
   ReplayTimelineStoreLike,
   ReplayHealthCheck,
+  TaskDependencyNode,
+  TaskDagSortResult,
 } from "./queries";
 
 export {
@@ -317,6 +324,23 @@ export {
   type SkillRatingState,
   type PurchaseRecordState,
 } from "./skills";
+
+export {
+  deriveFeedPostPda,
+  deriveFeedVotePda,
+  encodeTopic,
+  decodeTopic,
+  postToFeed,
+  upvotePost,
+  fetchFeedPost,
+  fetchFeedVote,
+  fetchFeedPostsByTopic,
+  fetchAllFeedPosts,
+  type FeedPostState,
+  type FeedVoteState,
+  type PostToFeedParams,
+  type FeedTransactionOptions,
+} from "./feed";
 
 export { PrivacyClient, type PrivacyClientConfig } from "./client";
 

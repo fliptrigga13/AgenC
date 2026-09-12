@@ -779,3 +779,155 @@ function deserializeDispute(
     initiatedAt,
   };
 }
+
+// ============================================================================
+// Task DAG Dependency Resolution & Topological Sorting
+// ============================================================================
+
+export interface TaskDependencyNode {
+  readonly taskPda: PublicKey;
+  readonly task: DependentTask | null;
+  readonly children: TaskDependencyNode[];
+  readonly depth: number;
+}
+
+export interface TaskDagSortResult {
+  readonly sortedTaskPdas: PublicKey[];
+  readonly hasCycle: boolean;
+  readonly cycleNodes?: PublicKey[];
+}
+
+/**
+ * Fetch a single task by its PDA and parse its DependentTask state.
+ */
+export async function getTaskByPda(
+  connection: Connection,
+  taskPda: PublicKey,
+): Promise<DependentTask | null> {
+  const info = await connection.getAccountInfo(taskPda);
+  if (!info || !info.data) return null;
+  return deserializeTaskAccount(taskPda, info.data as Buffer);
+}
+
+/**
+ * Topologically sorts a list of tasks with parent-child dependencies using Kahn's algorithm.
+ * Parent tasks (depended upon) always precede dependent child tasks in the sorted order.
+ * Accurately detects circular dependencies and returns cycleNodes when detected.
+ */
+export function sortTaskDependencyDag(
+  nodes: Array<{ taskPda: PublicKey; dependsOn: PublicKey | null }>,
+): TaskDagSortResult {
+  const nodeMap = new Map<string, PublicKey>();
+  const inDegree = new Map<string, number>();
+  const adjacency = new Map<string, string[]>();
+
+  for (const n of nodes) {
+    const key = n.taskPda.toBase58();
+    nodeMap.set(key, n.taskPda);
+    if (!inDegree.has(key)) inDegree.set(key, 0);
+    if (!adjacency.has(key)) adjacency.set(key, []);
+  }
+
+  for (const n of nodes) {
+    if (n.dependsOn) {
+      const parentKey = n.dependsOn.toBase58();
+      const childKey = n.taskPda.toBase58();
+      if (!nodeMap.has(parentKey)) {
+        nodeMap.set(parentKey, n.dependsOn);
+        if (!inDegree.has(parentKey)) inDegree.set(parentKey, 0);
+        if (!adjacency.has(parentKey)) adjacency.set(parentKey, []);
+      }
+      adjacency.get(parentKey)!.push(childKey);
+      inDegree.set(childKey, (inDegree.get(childKey) ?? 0) + 1);
+    }
+  }
+
+  const queue: string[] = [];
+  for (const [key, deg] of inDegree.entries()) {
+    if (deg === 0) queue.push(key);
+  }
+
+  const sortedKeys: string[] = [];
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    sortedKeys.push(current);
+    const neighbors = adjacency.get(current) ?? [];
+    for (const neighbor of neighbors) {
+      const currentDeg = inDegree.get(neighbor) ?? 0;
+      const nextDeg = currentDeg - 1;
+      inDegree.set(neighbor, nextDeg);
+      if (nextDeg === 0) {
+        queue.push(neighbor);
+      }
+    }
+  }
+
+  if (sortedKeys.length < inDegree.size) {
+    const cycleNodes: PublicKey[] = [];
+    for (const [key, deg] of inDegree.entries()) {
+      if (deg > 0 && nodeMap.has(key)) {
+        cycleNodes.push(nodeMap.get(key)!);
+      }
+    }
+    return {
+      sortedTaskPdas: sortedKeys.map((k) => nodeMap.get(k)!),
+      hasCycle: true,
+      cycleNodes,
+    };
+  }
+
+  return {
+    sortedTaskPdas: sortedKeys.map((k) => nodeMap.get(k)!),
+    hasCycle: false,
+  };
+}
+
+/**
+ * Recursively resolves a task dependency tree starting from a root task PDA.
+ */
+export async function getTaskDependencyTree(
+  connection: Connection,
+  programId: PublicKey,
+  rootTaskPda: PublicKey,
+  maxDepth = 10,
+): Promise<TaskDependencyNode> {
+  const rootTask = await getTaskByPda(connection, rootTaskPda);
+
+  async function buildSubtree(
+    currentPda: PublicKey,
+    currentTask: DependentTask | null,
+    depth: number,
+    visited: Set<string>,
+  ): Promise<TaskDependencyNode> {
+    const pdaStr = currentPda.toBase58();
+    if (depth >= maxDepth || visited.has(pdaStr)) {
+      return { taskPda: currentPda, task: currentTask, children: [], depth };
+    }
+    visited.add(pdaStr);
+
+    const childrenTasks = await getTasksByDependency(
+      connection,
+      programId,
+      currentPda,
+    );
+    const childrenNodes: TaskDependencyNode[] = [];
+    for (const child of childrenTasks) {
+      const childNode = await buildSubtree(
+        child.publicKey,
+        child,
+        depth + 1,
+        new Set(visited),
+      );
+      childrenNodes.push(childNode);
+    }
+
+    return {
+      taskPda: currentPda,
+      task: currentTask,
+      children: childrenNodes,
+      depth,
+    };
+  }
+
+  return buildSubtree(rootTaskPda, rootTask, 0, new Set());
+}

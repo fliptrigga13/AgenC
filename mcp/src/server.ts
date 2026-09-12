@@ -20,6 +20,8 @@ import { registerHumanFacingTools } from "./tools/human-facing.js";
 import { registerSkillTools } from "./tools/skills.js";
 import { registerGovernanceTools } from "./tools/governance.js";
 import { registerReputationTools } from "./tools/reputation.js";
+import { registerSocialTools } from "./tools/social.js";
+import { registerCoordinationTools } from "./tools/coordination.js";
 import { registerPrompts } from "./prompts/register.js";
 
 function parseOperatorRole(value: string | undefined): OperatorRole | null {
@@ -156,6 +158,8 @@ export function createServer(): McpServer {
   registerSkillTools(server);
   registerGovernanceTools(server);
   registerReputationTools(server);
+  registerSocialTools(server);
+  registerCoordinationTools(server);
 
   // Register MCP resources
   registerResources(server);

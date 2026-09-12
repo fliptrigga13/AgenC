@@ -211,6 +211,20 @@ export interface ActivityEvent {
   parentTraceId?: string;
 }
 
+export interface FeedPostInfo {
+  pda: string;
+  author: string;
+  authorAgentPda: string;
+  topic: string;
+  content: string;
+  contentHash: string;
+  upvotes: number;
+  hasUpvoted?: boolean;
+  createdAt: number;
+  parentPost?: string | null;
+  replyCount?: number;
+}
+
 // ============================================================================
 // WebSocket Message Envelope
 // ============================================================================
