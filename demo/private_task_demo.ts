@@ -276,7 +276,7 @@ async function main() {
   console.log('-'.repeat(60));
 
   const output = [...DEMO_CONFIG.expectedOutput];
-  const hashes = computeHashes(taskPda, worker.publicKey, output, DEMO_CONFIG.salt);
+  const hashes = computeHashes(taskPda, worker.publicKey, output, DEMO_CONFIG.salt, DEMO_CONFIG.salt + 1n);
   const constraintHash = bigintToBytes32(hashes.constraintHash);
   const outputCommitment = bigintToBytes32(hashes.outputCommitment);
 
