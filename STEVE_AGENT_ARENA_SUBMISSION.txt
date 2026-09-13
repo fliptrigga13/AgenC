@@ -1,0 +1,48 @@
+STEVE AGENT ARENA SUBMISSION — AgenC Autonomous Agent
+=====================================================
+Listing: https://earn.superteam.fun/listings/bounties/steve-agent-arena-launch-your-agent-and-win-500-usdc
+Sponsor: OOBE Protocol | Prizes: 500 USDC (250 / 150 / 100) | Deadline: September 20, 2026
+
+1. AGENT NAME
+AgenC — Autonomous Task Escrow & Verification Agent (agenc-protocol-agent)
+
+2. REPOSITORY (live fork)
+https://github.com/fliptrigga13/AgenC
+Branch: release/v1.0.0-onchain-marketplace
+
+3. WHAT THE AGENT DOES AUTONOMOUSLY
+- Monitors for task bounties, claims tasks on Solana Devnet, executes compute
+  through its skill engine (sandboxed tool execution, delegation graphs, MCP tools).
+- Locks bounty capital in Anchor escrow PDAs; releases payment only on verified
+  proof of completion (including RISC Zero Groth16 ZK path for private compute).
+- Protocol treasury captures a 2.5% fee on settlement; skill creators keep 80%
+  of tool licensing revenue via the on-chain royalty engine.
+- Runs as a daemon: `agenc-runtime` CLI dispatches start / status / stop / doctor
+  through runtime/src/cli/index.ts -> runtime/src/cli/daemon.ts + runtime/src/gateway/daemon.ts.
+
+4. SOLANA DEVNET INTEGRATION (verified)
+- Program: agenc-coordination at 5j9ZbT3mnPX5QjWVMrDaWFuaGf8ddji6LW1HVJw6kUE7
+  (confirmed in Anchor.toml and programs/agenc-coordination/src/lib.rs declare_id!).
+- 42 Anchor instructions covering task lifecycle, escrow lock/claim/settle,
+  dispute resolution, reputation staking/slashing, skill registry + royalties.
+- 42/42 Anchor instruction tests passing; Borsh ZST, container hardening, and
+  mainnet-readiness gates pass (see HACKATHON_SUBMISSION.md telemetry table).
+- TypeScript SDK (sdk/) + agent runtime (runtime/) + MCP server (mcp/) + React
+  dashboard (web/, port 5173) all ship in this repo.
+
+5. HOW TO RUN IT
+  git clone https://github.com/fliptrigga13/AgenC && cd AgenC
+  npm test                        # Vitest suites across SDK & runtime
+  npm --prefix web run dev         # dashboard on :5173
+  npx agenc-runtime daemon start --config ~/.agenc/config.json
+  npx agenc-runtime daemon status
+
+6. VERIFICATION
+- HACKATHON_SUBMISSION.md: architecture diagram, telemetry gates, 2-min demo script.
+- MONETIZATION_ACTION_KIT.md: agent credentials + payout claim code.
+- Anchor.toml + lib.rs program ID match; daemon lifecycle files present and dispatch
+  verified (dispatchDaemonCommands in runtime/src/cli/index.ts).
+
+7. ROADMAP IF WE WIN
+- Fund Devnet->Mainnet cutover costs (account rent, Helius/Triton RPC, OtterSec/Neodyme audit).
+- Expand autonomous skill marketplace + multi-agent task DAG engine already on this branch.

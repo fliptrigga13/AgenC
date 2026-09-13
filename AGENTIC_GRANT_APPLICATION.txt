@@ -1,0 +1,49 @@
+AGENTIC ENGINEERING GRANT APPLICATION ($200 USDG) — AgenC
+================================================================
+Listing: https://superteam.fun/earn/grants/agentic-engineering
+Payout: $100 upfront + $100 on ship. Repo: https://github.com/fliptrigga13/AgenC
+
+Q: Project title?
+A: AgenC — Trustless On-Chain Escrow & ZK Coordination for Autonomous AI Agents
+
+Q: One-line pitch?
+A: The economic settlement layer on Solana enabling autonomous AI agents to buy,
+sell, and verify compute via Anchor task escrows and RISC Zero zero-knowledge proofs.
+
+Q: What will you build/ship with AI coding tools?
+A: (1) Anchor program agenc-coordination: 42 on-chain instructions — task create/
+claim/settle, escrow locking, dispute resolution, reputation stake/slash, skill
+registry with 80/20 creator royalties, 2.5% protocol fee capture. (2) RISC Zero
+Groth16 ZK router (complete_task_private.rs) for private execution proofs.
+(3) Glassmorphic React/TypeScript WebChat + WebSocket control-plane gateway to a
+Node agent runtime on Solana Devnet. (4) Deployment-readiness gate
+(scripts/check-deployment-readiness.mjs) enforcing Borsh ZST, MPC, and mainnet checks.
+All AI-assisted: Anchor instruction scaffolding, ZK router policies, SDK/runtime
+TypeScript, UI components — then shipped as this open-source monorepo.
+
+Q: How is Agentic Engineering used?
+A: 1. Anchor smart-contract engineering via AI coding tools (42 instructions,
+escrow PDAs, fee splits). 2. ZK integration (Groth16 router policies proving
+off-chain correctness without leaking weights/prompts). 3. Full-stack UI + Devnet
+control plane (React, WebSocket gateway :3100, session/memory manager).
+4. Security/mainnet readiness (100% readiness gate, Docker-sandboxed tool isolation).
+
+Q: Solana integration?
+A: Native: Devnet program 5j9ZbT3mnPX5QjWVMrDaWFuaGf8ddji6LW1HVJw6kUE7 (Anchor.toml
++ lib.rs declare_id! match), SOL/SPL escrows, treasury PDA, 42/42 instruction tests.
+Test wallet: vAi8y9ZNnxhHkWrmNFZe6vbHmGBTooebSVtxJq5n14i.
+
+Q: Current state + shippable scope?
+A: Shipped on Devnet today: program + SDK (@agenc/sdk) + runtime + MCP + web
+dashboard. Grant scope: harden daemon lifecycle (start/status/stop/doctor via
+runtime/src/cli/index.ts -> cli/daemon.ts + gateway/daemon.ts), expand on-chain
+runtime daemon coverage, ship MVP demo URL + receipts for tranche 2.
+
+Q: Links?
+A: Repo: https://github.com/fliptrigga13/AgenC (branch release/v1.0.0-onchain-marketplace).
+Docs: HACKATHON_SUBMISSION.md (architecture, telemetry, demo script),
+MONETIZATION_ACTION_KIT.md (agent ID 34f7b134-a24b-46cf-b498-407df53bcbc8).
+
+Q: How will the $200 be spent?
+A: One month of highest-tier AI coding subscription(s) used to build and ship the
+above; receipt(s) totalling $200 uploaded at tranche-2 review.

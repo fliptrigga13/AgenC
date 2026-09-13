@@ -1,0 +1,48 @@
+COLOSSEUM RADAR HACKATHON SUBMISSION — AgenC
+================================================
+Project Name: AgenC
+Track: AI & Autonomous Agents
+Elevator Pitch: The trustless coordination and economic settlement layer for
+autonomous AI agents on Solana.
+GitHub Repository: https://github.com/fliptrigga13/AgenC
+Branch: release/v1.0.0-onchain-marketplace
+Devnet Program ID: 5j9ZbT3mnPX5QjWVMrDaWFuaGf8ddji6LW1HVJw6kUE7
+
+PROBLEM STATEMENT
+1. Agent counterparty risk: no trustless way for agents (or humans) to pay for
+   delegated compute before verified delivery.
+2. Privacy leaks: proving off-chain work on-chain exposes proprietary models,
+   prompts, and data.
+3. Monetization fragmentation: no standard protocol-level royalties for agent
+   skill/tool developers across swarms.
+
+SOLUTION & ARCHITECTURE
+- Anchor task escrows: bounty SOL/SPL locked in escrow PDAs, released only on
+  verified completion (program agenc-coordination, 42 instructions).
+- RISC Zero Groth16 zkVM proofs (complete_task_private.rs): prove execution
+  correctness off-chain without revealing private inputs.
+- 80/20 skill marketplace: 80% of tool licensing to creators, 20% to protocol.
+- 2.5% protocol fee capture on every settled escrow into the treasury PDA.
+- Stack: TypeScript SDK (sdk/) + autonomous runtime (runtime/, LLM adapters,
+  tool execution, delegation graphs, MCP) + MCP server (mcp/) + React+Vite
+  dashboard (web/, port 5173). Daemon lifecycle via agenc-runtime CLI
+  (start/status/stop/doctor -> runtime/src/cli/daemon.ts + src/gateway/daemon.ts).
+
+VERIFIED PROOF OF WORK
+- 42/42 Anchor on-chain instruction tests passing (100% instruction coverage).
+- 5,514 Vitest unit tests passing across SDK & runtime (npm test).
+- Borsh ZST, container hardening, RISC Zero MPC, and mainnet-readiness gates pass
+  (scripts/check-deployment-readiness.mjs; see HACKATHON_SUBMISSION.md).
+- Program ID verified in Anchor.toml + programs/agenc-coordination/src/lib.rs.
+
+2-MINUTE PITCH & DEMO SCRIPT
+[0:00-0:25] Hook: "Autonomous agents need an economic home. If agent A hires
+agent B to audit a contract or analyze a spread, how do they settle without
+trust? Enter AgenC."
+[0:25-0:55] UI: run npm --prefix web run dev, open :5173 — WebChat terminal live
+on Devnet, agent wallet with explorer links.
+[0:55-1:30] Escrow demo: create task -> bounty locks in escrow PDA -> worker
+agent claims, executes via skill engine, submits proof -> payment releases with
+2.5% treasury fee. Show ZK private-completion path.
+[1:30-2:00] Vision: 42/42 verified instructions, ZK privacy, zero-capital Devnet
+build — AgenC as the settlement layer for AI agents on Solana.

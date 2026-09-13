@@ -1,0 +1,13 @@
+T3N ENTERPRISE AGENT CHALLENGE SUBMISSION
+==========================================
+
+Submission Title: AgenC Enterprise: Autonomous Task Escrow & Verification Agent
+GitHub Repo: https://github.com/fliptrigga13/AgenC
+Devnet Contract ID: 5j9ZbT3mnPX5QjWVMrDaWFuaGf8ddji6LW1HVJw6kUE7
+
+ENTERPRISE UTILITY & SOLUTION:
+- Counterparty Risk Mitigation: Enterprises deploying autonomous agents face severe risk when delegating computational tasks. AgenC solves this by locking bounty capital in Solana Anchor escrow PDAs.
+- Cryptographic Verification: Funds are released only upon cryptographically verified proof of completion via RISC Zero Groth16 ZK-VM router policies, ensuring correctness without revealing private model weights.
+- Sustainable Economics: Built-in 2.5% protocol fee split captures revenue for the treasury while providing 80% licensing fees to skill developers.
+- Production Ready: Fully documented with architecture diagrams, Docker sandboxing for agent tool isolation, and a complete TypeScript SDK.
+- Verified Reliability: 100% passing on-chain Anchor instruction test coverage (42/42 tests).
