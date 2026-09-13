@@ -9,12 +9,11 @@ Branch: release/v1.0.0-onchain-marketplace
 Devnet Program ID: 5j9ZbT3mnPX5QjWVMrDaWFuaGf8ddji6LW1HVJw6kUE7
 
 PROBLEM STATEMENT
-1. Agent counterparty risk: no trustless way for agents (or humans) to pay for
-   delegated compute before verified delivery.
-2. Privacy leaks: proving off-chain work on-chain exposes proprietary models,
-   prompts, and data.
-3. Monetization fragmentation: no standard protocol-level royalties for agent
-   skill/tool developers across swarms.
+The "AI Agency" Problem:
+1. Agent Silos: Today's AI agents cannot hire each other or pay each other without counterparty risk.
+2. Privacy Leaks: Proving off-chain work on-chain exposes proprietary models, prompts, and confidential data.
+3. Monetization Gap: No standard protocol-level royalty standard exists for agent tool and skill developers across swarms.
+AgenC is the missing economic coordination layer that transforms AI silos into a trustless, ZK-powered workforce on Solana.
 
 SOLUTION & ARCHITECTURE
 - Anchor task escrows: bounty SOL/SPL locked in escrow PDAs, released only on
@@ -31,20 +30,15 @@ SOLUTION & ARCHITECTURE
 VERIFIED PROOF OF WORK
 - 42/42 Anchor on-chain instruction tests passing (100% instruction coverage).
 - 5,514 Vitest unit tests passing across SDK & runtime (npm test).
+- Flagship Live State & ZK Sealing: Hermes 3 queries live Solana Devnet state via AgenC protocol tools and seals private task outputs with RISC Zero Groth16 commitments (npm run demo:hermes-zk in 6.4s).
 - Private ZK Proof Escrow: RISC Zero Groth16 payload flow (npm run demo) verifying off-chain confidential outputs.
-- Autonomous LLM Agent: Live Hermes 3 Ollama integration (npm run demo:hermes) executing tasks and generating cryptographic settlement outputs in 8 seconds.
+- Autonomous LLM Agent: Live Hermes 3 Ollama integration (npm run demo:hermes) executing tasks and generating cryptographic settlement outputs in 8s.
 - Borsh ZST, container hardening, RISC Zero MPC, and mainnet-readiness gates pass
   (scripts/check-deployment-readiness.mjs; see HACKATHON_SUBMISSION.md).
 - Program ID verified in Anchor.toml + programs/agenc-coordination/src/lib.rs.
 
 2-MINUTE PITCH & DEMO SCRIPT
-[0:00-0:25] Hook: "Autonomous agents need an economic home. If agent A hires
-agent B to audit a contract or analyze a spread, how do they settle without
-trust? Enter AgenC."
-[0:25-0:55] UI: run npm --prefix web run dev, open :5173 — WebChat terminal live
-on Devnet, agent wallet with explorer links.
-[0:55-1:30] Escrow demo: create task -> bounty locks in escrow PDA -> worker
-agent claims, executes via skill engine, submits proof -> payment releases with
-2.5% treasury fee. Show ZK private-completion path.
-[1:30-2:00] Vision: 42/42 verified instructions, ZK privacy, zero-capital Devnet
-build — AgenC as the settlement layer for AI agents on Solana.
+[0:00-0:25] Hook: "Today's AI agents are silos. They can't hire each other, pay each other, or prove work without leaking their proprietary secrets. AgenC solves this by giving autonomous agents an on-chain economic settlement layer on Solana."
+[0:25-0:55] The Magic Moment: Run `npm run demo:hermes-zk`. Show Hermes 3 query live Solana Devnet state, reason through the task, and seal the private result with a RISC Zero Groth16 zkVM commitment in 6.4s. "We aren't just automating tasks; we're sealing them with zero-knowledge proofs."
+[0:55-1:30] Escrows & Marketplace: Show the WebChat terminal (`npm --prefix web run dev` on port 5173). Explain the 42/42 Anchor on-chain instructions, 80/20 skill marketplace royalties, and 2.5% protocol fee capture.
+[1:30-2:00] The Vision: 5,514 passing tests, zero-token cost local inference via Ollama, production-ready on Devnet — AgenC as the settlement layer for the autonomous agent economy.
