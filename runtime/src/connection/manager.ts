@@ -12,7 +12,11 @@
  * @module
  */
 
-import { Connection } from "@solana/web3.js";
+import { Connection, type PublicKey } from "@solana/web3.js";
+import {
+  estimatePriorityFee,
+  type PriorityFeeConfig,
+} from "./priority-fee.js";
 import type {
   ConnectionManagerConfig,
   ConnectionManagerStats,
@@ -234,6 +238,17 @@ export class ConnectionManager {
    */
   setMetrics(metrics: MetricsProvider): void {
     this.metrics = metrics;
+  }
+
+  /**
+   * Estimates dynamic priority fees (micro-lamports per compute unit)
+   * for the current active connection to ensure fast landing on Solana.
+   */
+  async getPriorityFee(
+    accounts?: PublicKey[],
+    config?: PriorityFeeConfig,
+  ): Promise<number> {
+    return estimatePriorityFee(this.getConnection(), accounts, config);
   }
 
   // ==========================================================================

@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { ChatMessage as ChatMessageType } from '../../types';
 import { ChatMessage } from './ChatMessage';
 
+import { ThinkingIndicator } from './ThinkingIndicator';
+
 const AUTO_SCROLL_THRESHOLD_PX = 96;
 
 interface MessageListProps {
@@ -63,16 +65,7 @@ export function MessageList({ messages, isTyping, theme = 'dark', searchQuery = 
           <ChatMessage key={msg.id} message={msg} theme={theme} searchQuery={query} />
         ))}
 
-        {isTyping && (
-          <div className="animate-msg-agent text-sm">
-            <span className="text-bbs-purple font-bold">AGENT{'>'} </span>
-            <span className="text-bbs-purple">
-              <span className="animate-typing-dot inline-block" style={{ animationDelay: '0ms' }}>.</span>
-              <span className="animate-typing-dot inline-block" style={{ animationDelay: '200ms' }}>.</span>
-              <span className="animate-typing-dot inline-block" style={{ animationDelay: '400ms' }}>.</span>
-            </span>
-          </div>
-        )}
+        {isTyping && <ThinkingIndicator />}
 
         <div ref={endRef} />
       </div>

@@ -82,51 +82,69 @@ export function ChatMessage({ message, theme: _theme = 'dark', searchQuery = '' 
   // ── User message ──
   if (isUser) {
     return (
-      <div className={`animate-msg-user${searchQuery ? ' ring-1 ring-bbs-yellow/40' : ''}`}>
-        <div className="text-sm leading-relaxed">
-          <span className="text-bbs-orange font-bold">USER{'>'} </span>
-          <span className="text-bbs-white">{message.content}</span>
+      <div className={`animate-msg-user my-3${searchQuery ? ' ring-1 ring-amber-400/40' : ''}`}>
+        <div className="rounded-xl border border-white/[0.1] bg-[#0c0e17]/90 backdrop-blur-xl p-4 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <span className="flex items-center justify-center w-5 h-5 rounded-full bg-[#ff7700]/20 border border-[#ff7700]/50 text-xs">
+                👤
+              </span>
+              <span className="text-xs font-bold text-[#ffaa33] tracking-wider uppercase font-sans">
+                User
+              </span>
+            </div>
+            <span className="text-[11px] text-slate-400 font-mono">{time}</span>
+          </div>
+          <div className="text-sm text-slate-100 font-sans leading-relaxed">{message.content}</div>
         </div>
         {message.attachments && message.attachments.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-1 ml-6">
+          <div className="flex flex-wrap gap-2 mt-2 ml-3">
             {message.attachments.map((att, i) =>
               att.dataUrl ? (
                 <img
                   key={`${att.filename}-${i}`}
                   src={att.dataUrl}
                   alt={att.filename}
-                  className="max-h-[150px] max-w-[200px] border border-bbs-border"
+                  className="max-w-[200px] max-h-[150px] border border-[#ff7700]/30 rounded-lg shadow-md"
                 />
               ) : (
                 <span
                   key={`${att.filename}-${i}`}
-                  className="text-xs text-bbs-cyan"
+                  className="text-xs text-cyan-300 font-mono px-2.5 py-1 border border-cyan-500/30 rounded-md bg-cyan-950/40"
                 >
-                  [{att.filename}]
+                  {att.filename}
                 </span>
               ),
             )}
           </div>
         )}
-        <div className="text-bbs-border text-xs mt-1 select-none">{'\u2500'.repeat(60)}</div>
       </div>
     );
   }
 
   // ── Agent message ──
   return (
-    <div className={`animate-msg-agent${searchQuery ? ' ring-1 ring-bbs-yellow/40' : ''}`}>
-      <div className="border border-bbs-purple-dim">
+    <div className={`animate-msg-agent my-3${searchQuery ? ' ring-1 ring-amber-400/40' : ''}`}>
+      <div className="rounded-xl border border-[#ff7700]/30 bg-[#090b14]/95 backdrop-blur-xl overflow-hidden shadow-[0_0_24px_rgba(255,119,0,0.12)]">
         {/* Header bar */}
-        <div className="flex items-center justify-between px-3 py-1 bg-bbs-purple-dim/40">
-          <span className="text-xs text-bbs-white">
-            {'\u2524'} AGENT RESPONSE {'\u251C'}
-          </span>
-          <span className="text-xs text-bbs-pink">{time}</span>
+        <div className="flex items-center justify-between px-4 py-2 bg-gradient-to-r from-[#241206]/90 via-[#150a04]/80 to-transparent border-b border-[#ff7700]/25">
+          <div className="flex items-center gap-2.5">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400 shadow-[0_0_8px_#00f59b]" />
+            </span>
+            <span className="text-xs font-bold tracking-wider text-white font-sans">
+              AGENT RESPONSE
+            </span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#ff7700]/20 text-[#ffaa33] font-mono font-bold border border-[#ff7700]/40 shadow-[0_0_8px_rgba(255,119,0,0.2)]">
+              SOLANA RUNTIME
+            </span>
+          </div>
+          <span className="text-[11px] text-[#ffaa33]/80 font-mono">{time}</span>
         </div>
 
         {/* Body */}
-        <div className="px-3 py-2">
+        <div className="px-4 py-3">
           {/* Screenshots */}
           {allImages.map((src, i) => (
             <img

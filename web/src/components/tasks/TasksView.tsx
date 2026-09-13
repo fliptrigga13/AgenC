@@ -16,21 +16,32 @@ interface TasksViewProps {
   onRefresh: () => void;
   onCreate: (params: Record<string, unknown>) => void;
   onCancel: (taskId: string) => void;
+  onClaim?: (taskId: string) => void;
 }
 
-export function TasksView({ tasks, onRefresh, onCreate, onCancel }: TasksViewProps) {
+export function TasksView({ tasks, onRefresh, onCreate, onCancel, onClaim }: TasksViewProps) {
   const [filter, setFilter] = useState('');
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     onRefresh();
   }, [onRefresh]);
 
-  // Reverse order (newest first) and apply status filter
+  // Reverse order (newest first) and apply status filter and search query
   const filtered = useMemo(() => {
-    const reversed = [...tasks].reverse();
-    if (!filter) return reversed;
-    return reversed.filter((t) => t.status.toLowerCase() === filter);
-  }, [tasks, filter]);
+    let result = [...tasks].reverse();
+    if (filter) {
+      result = result.filter((t) => t.status.toLowerCase() === filter);
+    }
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      result = result.filter((t) =>
+        (t.description && t.description.toLowerCase().includes(q)) ||
+        (t.id && t.id.toLowerCase().includes(q))
+      );
+    }
+    return result;
+  }, [tasks, filter, search]);
 
   // Count per status for filter badges
   const counts = useMemo(() => {
@@ -54,7 +65,7 @@ export function TasksView({ tasks, onRefresh, onCreate, onCancel }: TasksViewPro
             </svg>
           </div>
           <div>
-            <h2 className="text-base font-bold text-tetsuo-800 tracking-tight">Tasks</h2>
+            <h2 className="text-base font-bold glossy-text-shine tracking-tight font-heading">Tasks</h2>
             {tasks.length > 0 && (
               <div className="text-[10px] text-tetsuo-400 mt-0.5">{tasks.length} task{tasks.length !== 1 ? 's' : ''}</div>
             )}
@@ -72,9 +83,9 @@ export function TasksView({ tasks, onRefresh, onCreate, onCancel }: TasksViewPro
         </button>
       </div>
 
-      {/* Filter chips */}
-      {tasks.length > 0 && (
-        <div className="flex items-center gap-1.5 px-6 py-2.5 border-b border-tetsuo-200 overflow-x-auto">
+      {/* Filter chips & Search */}
+      <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-2.5 border-b border-white/[0.08] bg-[#07080f]/90 backdrop-blur-md">
+        <div className="flex items-center gap-1.5 overflow-x-auto">
           {FILTERS.map((f) => {
             const count = f.value ? (counts[f.value] ?? 0) : tasks.length;
             const active = filter === f.value;
@@ -82,15 +93,15 @@ export function TasksView({ tasks, onRefresh, onCreate, onCancel }: TasksViewPro
               <button
                 key={f.value}
                 onClick={() => setFilter(f.value)}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-all duration-150 ${
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200 ${
                   active
-                    ? 'bg-accent text-white shadow-sm'
-                    : 'bg-tetsuo-100 text-tetsuo-500 hover:bg-tetsuo-200 hover:text-tetsuo-700'
+                    ? 'bg-gradient-to-r from-[#FF7700] to-[#FFAA22] text-[#06070a] shadow-[0_2px_12px_rgba(255,119,0,0.3)]'
+                    : 'bg-white/[0.04] text-slate-400 hover:text-white hover:bg-white/[0.08] border border-white/5'
                 }`}
               >
                 {f.label}
                 {count > 0 && (
-                  <span className={`text-[10px] ${active ? 'text-white/70' : 'text-tetsuo-400'}`}>
+                  <span className={`text-[10px] font-mono ${active ? 'text-black/75 font-bold' : 'text-slate-500'}`}>
                     {count}
                   </span>
                 )}
@@ -98,7 +109,32 @@ export function TasksView({ tasks, onRefresh, onCreate, onCancel }: TasksViewPro
             );
           })}
         </div>
-      )}
+
+        {/* Task Search Bar */}
+        <div className="relative w-full sm:w-64">
+          <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#ffaa33]">
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </div>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search tasks..."
+            className="w-full bg-[#10121c]/90 border border-white/10 rounded-lg pl-8 pr-7 py-1 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-[#ffaa33]/70 focus:shadow-[0_0_12px_rgba(255,119,0,0.2)] transition-all"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs transition-colors"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-6"><div className="max-w-2xl mx-auto space-y-3">
@@ -119,7 +155,7 @@ export function TasksView({ tasks, onRefresh, onCreate, onCancel }: TasksViewPro
         ) : (
           filtered.map((task, i) => (
             <div key={task.id} className="animate-list-item" style={{ animationDelay: `${(i + 1) * 50}ms` }}>
-              <TaskCard task={task} onCancel={onCancel} />
+              <TaskCard task={task} onCancel={onCancel} onClaim={onClaim} />
             </div>
           ))
         )}

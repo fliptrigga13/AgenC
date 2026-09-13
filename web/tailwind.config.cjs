@@ -9,27 +9,27 @@ module.exports = {
     extend: {
       colors: {
         surface: 'rgb(var(--surface) / <alpha-value>)',
-        // BBS terminal palette
+        // Futuristic cybernetic palette (ZERO PURPLE)
         bbs: {
-          black: '#0A0A0F',
-          purple: '#BB66FF',
-          'purple-dim': '#6B3A99',
-          pink: '#FF66AA',
-          'pink-dim': '#993D66',
-          orange: '#FF9933',
-          green: '#33FF66',
-          'green-dim': '#1F993D',
-          cyan: '#33CCFF',
-          magenta: '#CC66FF',
-          'magenta-dim': '#7A3D99',
-          red: '#FF3333',
-          yellow: '#FFCC33',
-          white: '#E8E8E8',
-          lightgray: '#BBBBBB',
-          gray: '#666666',
-          dark: '#111118',
-          surface: '#16161E',
-          border: '#2A2A3A',
+          black: '#040508',
+          purple: '#FF7700', // No purple: Replaced with Electric Solar Orange
+          'purple-dim': '#2E1504', // Rich amber obsidian border
+          pink: '#FFAA33', // Golden Amber
+          'pink-dim': '#3D1F06',
+          orange: '#FF5500', // Molten Orange
+          green: '#00F59B', // Holographic Emerald
+          'green-dim': '#083D26',
+          cyan: '#00E5FF', // Quantum Cyber Cyan
+          magenta: '#FF8800',
+          'magenta-dim': '#2E1504',
+          red: '#FF3B30',
+          yellow: '#FFCC00',
+          white: '#F8FAFC',
+          lightgray: '#CBD5E1',
+          gray: '#64748B',
+          dark: '#080A0F',
+          surface: '#0D1017',
+          border: 'rgba(255, 119, 0, 0.22)',
         },
         // Map tetsuo scale to BBS grayscale equivalents
         tetsuo: {
@@ -46,15 +46,16 @@ module.exports = {
           950: 'rgb(var(--tetsuo-950) / <alpha-value>)',
         },
         accent: {
-          DEFAULT: '#BB66FF',
-          light: '#CC88FF',
-          dark: '#9944DD',
-          bg: 'rgba(187, 102, 255, 0.12)',
+          DEFAULT: '#FF7700',
+          light: '#FF9933',
+          dark: '#E65500',
+          bg: 'rgba(255, 119, 0, 0.14)',
         },
       },
       fontFamily: {
-        mono: ['JetBrains Mono', 'monospace'],
-        sans: ['JetBrains Mono', 'monospace'],
+        sans: ['"Plus Jakarta Sans"', 'Outfit', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
+        heading: ['Outfit', '"Space Grotesk"', '"Plus Jakarta Sans"', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
       },
     },
   },

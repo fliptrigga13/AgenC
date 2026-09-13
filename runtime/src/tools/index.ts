@@ -81,3 +81,15 @@ export {
   DEFAULT_MAX_OUTPUT_BYTES,
   DANGEROUS_SHELL_PATTERNS,
 } from "./system/index.js";
+
+// DeFi & DEX Tools
+export {
+  createDexScreenerTools,
+  WELL_KNOWN_SOLANA_MINTS,
+  DEXSCREENER_SEARCH_URL,
+  DEXSCREENER_TOKENS_URL,
+  DEXSCREENER_BOOSTS_URL,
+  type DexScreenerPair,
+  type DexScreenerToolsConfig,
+} from "./defi/index.js";
+

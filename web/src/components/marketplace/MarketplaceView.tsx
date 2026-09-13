@@ -119,7 +119,7 @@ export function MarketplaceView({
         <div>
           <div className="flex items-center gap-2">
             <span className="text-bbs-purple text-lg font-bold">🛒</span>
-            <h1 className="text-base font-bold text-bbs-white tracking-wide">
+            <h1 className="text-base font-bold glossy-text-shine tracking-wide font-heading">
               ON-CHAIN SKILL MARKETPLACE
             </h1>
             <span className="text-[10px] px-2 py-0.5 rounded bg-bbs-purple-dim text-bbs-purple font-mono">
@@ -158,19 +158,25 @@ export function MarketplaceView({
       )}
 
       {/* Search & Filter Bar */}
-      <div className="px-6 py-3 border-b border-bbs-purple-dim flex flex-wrap items-center gap-3 bg-bbs-black">
-        <div className="relative flex-1 min-w-[200px]">
+      <div className="px-6 py-3 border-b border-white/[0.08] flex flex-wrap items-center gap-3 bg-[#07080f]/95 backdrop-blur-xl">
+        <div className="relative flex-1 min-w-[220px]">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+            <svg className="w-3.5 h-3.5 text-[#ffaa33]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </div>
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search skills, tags, authors..."
-            className="w-full bg-bbs-surface border border-bbs-purple-dim rounded px-3 py-1.5 text-xs text-bbs-white placeholder:text-bbs-gray focus:outline-none focus:border-bbs-purple"
+            className="w-full bg-[#10121c]/90 border border-white/10 rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-[#ffaa33]/70 focus:shadow-[0_0_16px_rgba(255,119,0,0.2)] transition-all"
           />
           {search && (
             <button
               onClick={() => setSearch('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-bbs-gray hover:text-bbs-white text-xs"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs transition-colors"
             >
               ✕
             </button>
@@ -178,15 +184,15 @@ export function MarketplaceView({
         </div>
 
         {/* Tag Filters */}
-        <div className="flex items-center gap-1 overflow-x-auto">
+        <div className="flex items-center gap-1.5 overflow-x-auto">
           {TAG_FILTERS.map((tag) => (
             <button
               key={tag}
               onClick={() => setSelectedTag(tag)}
-              className={`px-2.5 py-1 text-xs rounded transition-colors whitespace-nowrap ${
+              className={`px-3 py-1.5 text-xs rounded-lg transition-all duration-200 whitespace-nowrap ${
                 selectedTag === tag
-                  ? 'bg-bbs-purple text-bbs-black font-bold'
-                  : 'bg-bbs-surface text-bbs-gray hover:text-bbs-lightgray'
+                  ? 'bg-gradient-to-r from-[#FF7700] to-[#FFAA22] text-[#06070a] font-bold shadow-[0_2px_12px_rgba(255,119,0,0.35)]'
+                  : 'bg-white/[0.04] text-slate-400 hover:text-white hover:bg-white/[0.08] border border-white/5'
               }`}
             >
               {tag}
@@ -195,12 +201,12 @@ export function MarketplaceView({
         </div>
 
         {/* Sort */}
-        <div className="flex items-center gap-1 text-xs text-bbs-gray">
-          <span>Sort:</span>
+        <div className="flex items-center gap-2 text-xs text-slate-400">
+          <span className="font-mono text-[11px] uppercase tracking-wider text-slate-500">Sort:</span>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
-            className="bg-bbs-surface border border-bbs-purple-dim rounded px-2 py-1 text-xs text-bbs-white focus:outline-none"
+            className="bg-[#10121c] border border-white/10 hover:border-[#ffaa33]/40 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#ffaa33] transition-colors cursor-pointer"
           >
             <option value="rating">Top Rated</option>
             <option value="downloads">Most Downloaded</option>

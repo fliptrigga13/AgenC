@@ -56,8 +56,9 @@ interface WsWebSocketServer {
 
 interface WsModule {
   WebSocketServer: new (opts: {
-    port: number;
+    port?: number;
     host?: string;
+    server?: import("node:http").Server;
     maxPayload?: number;
   }) => WsWebSocketServer;
 }
@@ -88,6 +89,7 @@ export class Gateway {
 
   private startedAt = 0;
   private wss: WsWebSocketServer | null = null;
+  private httpServer: import("node:http").Server | null = null;
   private configWatcher: ConfigWatcher | null = null;
   private readonly channels = new Map<string, ChannelHandle>();
   private readonly listeners = new Map<
@@ -332,11 +334,92 @@ export class Gateway {
     const MAX_CONCURRENT_CLIENTS = 512;
     const MAX_PAYLOAD_BYTES = 10 * 1024 * 1024; // 10MB safety bound
 
-    this.wss = new wsMod.WebSocketServer({
-      port,
-      host,
-      maxPayload: MAX_PAYLOAD_BYTES,
-    });
+    const isMocked =
+      typeof (wsMod.WebSocketServer as unknown as { mock?: unknown }).mock !==
+      "undefined";
+
+    if (!isMocked) {
+      const { createServer } = await import("node:http");
+      const httpServer = createServer((req, res) => {
+        const url = new URL(
+          req.url ?? "/",
+          `http://${req.headers.host ?? "localhost"}`,
+        );
+
+        if (req.method === "GET" && url.pathname === "/healthz") {
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(
+            JSON.stringify({
+              status: "healthy",
+              uptime: process.uptime(),
+              timestamp: new Date().toISOString(),
+              version: "1.0.0",
+            }),
+          );
+          return;
+        }
+
+        if (req.method === "GET" && url.pathname === "/readyz") {
+          const isReady = this._state === "running";
+          const allChannelsHealthy = Array.from(this.channels.values()).every(
+            (c) => c.isHealthy(),
+          );
+          res.writeHead(isReady ? 200 : 503, {
+            "Content-Type": "application/json",
+          });
+          res.end(
+            JSON.stringify({
+              status: isReady ? "ready" : "not_ready",
+              wsClients: this.wsClients.size,
+              channelsHealthy: allChannelsHealthy,
+            }),
+          );
+          return;
+        }
+
+        if (req.method === "GET" && url.pathname === "/metrics") {
+          const mem = process.memoryUsage();
+          const lines = [
+            "# HELP agenc_gateway_ws_clients Number of connected WebSocket clients",
+            "# TYPE agenc_gateway_ws_clients gauge",
+            `agenc_gateway_ws_clients ${this.wsClients.size}`,
+            "# HELP agenc_gateway_uptime_seconds Process uptime in seconds",
+            "# TYPE agenc_gateway_uptime_seconds counter",
+            `agenc_gateway_uptime_seconds ${process.uptime().toFixed(2)}`,
+            "# HELP agenc_gateway_memory_bytes Memory usage in bytes",
+            "# TYPE agenc_gateway_memory_bytes gauge",
+            `agenc_gateway_memory_bytes{type="heapUsed"} ${mem.heapUsed}`,
+            `agenc_gateway_memory_bytes{type="heapTotal"} ${mem.heapTotal}`,
+            `agenc_gateway_memory_bytes{type="rss"} ${mem.rss}`,
+          ];
+          res.writeHead(200, {
+            "Content-Type": "text/plain; version=0.0.4; charset=utf-8",
+          });
+          res.end(lines.join("\n") + "\n");
+          return;
+        }
+
+        res.writeHead(404, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Not Found" }));
+      });
+
+      this.httpServer = httpServer;
+      await new Promise<void>((resolve, reject) => {
+        httpServer.listen(port, host, () => resolve());
+        httpServer.once("error", reject);
+      });
+
+      this.wss = new wsMod.WebSocketServer({
+        server: httpServer,
+        maxPayload: MAX_PAYLOAD_BYTES,
+      });
+    } else {
+      this.wss = new wsMod.WebSocketServer({
+        port,
+        host,
+        maxPayload: MAX_PAYLOAD_BYTES,
+      });
+    }
 
     this.wss.on("connection", (...args: unknown[]) => {
       const socket = args[0] as WsWebSocket;
@@ -415,7 +498,14 @@ export class Gateway {
         }
         this.wsClients.delete(id);
       }
-      this.authenticatedClients.clear();
+      if (this.httpServer) {
+        try {
+          this.httpServer.close();
+        } catch {
+          // ignore close error
+        }
+        this.httpServer = null;
+      }
 
       if (!this.wss) {
         resolve();

@@ -24,3 +24,10 @@ export {
 } from "./retry.js";
 
 export { ConnectionManager } from "./manager.js";
+export {
+  estimatePriorityFee,
+  calculatePercentile,
+  createComputeBudgetInstructions,
+  DEFAULT_PRIORITY_FEE_CONFIG,
+  type PriorityFeeConfig,
+} from "./priority-fee.js";

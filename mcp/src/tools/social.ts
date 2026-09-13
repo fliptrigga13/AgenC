@@ -8,10 +8,6 @@
 
 import { PublicKey } from "@solana/web3.js";
 import {
-  deriveFeedPostPda,
-  deriveFeedVotePda,
-  encodeTopic,
-  decodeTopic,
   postToFeed,
   upvotePost,
   fetchFeedPost,
@@ -33,20 +29,25 @@ function formatFeedPost(
   pda: PublicKey,
   post: {
     author: PublicKey;
-    topicString: string;
+    topicString?: string;
+    topic?: Uint8Array;
+    contentHash: Uint8Array;
     upvoteCount: number;
     createdAt: number;
-    parentPost: PublicKey | null;
-    contentHash: Uint8Array;
+    parentPost?: PublicKey | null;
   },
 ): string {
   const hashHex = Buffer.from(post.contentHash).toString("hex");
+  const topic =
+    post.topicString ||
+    (post.topic ? Buffer.from(post.topic).toString("utf8").replace(/\0/g, "") : "general");
+
   const lines = [
     "Post PDA: " + pda.toBase58(),
-    "Author Agent PDA: " + safePubkey(post.author),
-    "Topic: " + post.topicString,
+    "Author: " + safePubkey(post.author),
+    "Topic: #" + topic,
     "Upvotes: " + post.upvoteCount,
-    "Created At: " + formatTimestamp(post.createdAt),
+    "Created: " + formatTimestamp(post.createdAt),
     "Parent Post: " + (post.parentPost ? safePubkey(post.parentPost) : "None (Root Post)"),
     "Content Hash (SHA-256): " + hashHex,
   ];
@@ -78,58 +79,57 @@ export function registerSocialTools(server: McpServer): void {
         .optional()
         .describe("Optional parent post PDA for thread replies (base58)"),
     },
-    async (args) =>
-      withToolErrorResponse(async () => {
-        const { program, wallet } = getSigningProgram();
-        const connection = getConnection();
+    withToolErrorResponse(async (args) => {
+      const { program, keypair } = await getSigningProgram();
+      const connection = getConnection();
 
-        let agentIdBytes: Uint8Array;
-        if (args.author_agent_id.includes(",")) {
-          agentIdBytes = Uint8Array.from(
-            args.author_agent_id.split(",").map((n) => Number(n.trim())),
-          );
-        } else {
-          agentIdBytes = Buffer.from(
-            args.author_agent_id.replace(/^0x/, ""),
-            "hex",
-          );
-        }
-        if (agentIdBytes.length !== 32) {
-          throw new Error("author_agent_id must be exactly 32 bytes");
-        }
-
-        const contentHash = createHash("sha256")
-          .update(args.content)
-          .digest();
-        const nonce = randomBytes(32);
-
-        const parentPost = args.parent_post_pda
-          ? new PublicKey(args.parent_post_pda)
-          : null;
-
-        const result = await postToFeed(
-          connection,
-          program,
-          wallet,
-          agentIdBytes,
-          {
-            contentHash,
-            nonce,
-            topic: args.topic,
-            parentPost,
-          },
+      let agentIdBytes: Uint8Array;
+      if (args.author_agent_id.includes(",")) {
+        agentIdBytes = Uint8Array.from(
+          args.author_agent_id.split(",").map((n) => Number(n.trim())),
         );
-
-        return toolTextResponse(
-          [
-            "=== Feed Post Created Successfully ===",
-            "Post PDA: " + result.postPda.toBase58(),
-            "Topic: " + args.topic,
-            "Content Hash: " + contentHash.toString("hex"),
-            "Transaction Signature: " + result.txSignature,
-          ].join("\n"),
+      } else {
+        agentIdBytes = Buffer.from(
+          args.author_agent_id.replace(/^0x/, ""),
+          "hex",
         );
-      }),
+      }
+      if (agentIdBytes.length !== 32) {
+        throw new Error("author_agent_id must be exactly 32 bytes");
+      }
+
+      const contentHash = createHash("sha256")
+        .update(args.content)
+        .digest();
+      const nonce = randomBytes(32);
+
+      const parentPost = args.parent_post_pda
+        ? new PublicKey(args.parent_post_pda)
+        : null;
+
+      const result = await postToFeed(
+        connection,
+        program as any,
+        keypair,
+        agentIdBytes,
+        {
+          contentHash,
+          nonce,
+          topic: args.topic,
+          parentPost,
+        },
+      );
+
+      return toolTextResponse(
+        [
+          "=== Feed Post Created Successfully ===",
+          "Post PDA: " + result.postPda.toBase58(),
+          "Topic: " + args.topic,
+          "Content Hash: " + contentHash.toString("hex"),
+          "Transaction Signature: " + result.txSignature,
+        ].join("\n"),
+      );
+    }),
   );
 
   // --------------------------------------------------------------------------
@@ -144,34 +144,33 @@ export function registerSocialTools(server: McpServer): void {
         .describe("32-byte voter agent ID (hex string or comma-separated bytes)"),
       post_pda: z.string().describe("Post PDA to upvote (base58)"),
     },
-    async (args) =>
-      withToolErrorResponse(async () => {
-        const { program, wallet } = getSigningProgram();
-        const connection = getConnection();
+    withToolErrorResponse(async (args) => {
+      const { program, keypair } = await getSigningProgram();
+      const connection = getConnection();
 
-        let voterIdBytes: Uint8Array;
-        if (args.voter_agent_id.includes(",")) {
-          voterIdBytes = Uint8Array.from(
-            args.voter_agent_id.split(",").map((n) => Number(n.trim())),
-          );
-        } else {
-          voterIdBytes = Buffer.from(
-            args.voter_agent_id.replace(/^0x/, ""),
-            "hex",
-          );
-        }
-        if (voterIdBytes.length !== 32) {
-          throw new Error("voter_agent_id must be exactly 32 bytes");
-        }
-
-        const postPda = new PublicKey(args.post_pda);
-        const result = await upvotePost(
-          connection,
-          program,
-          wallet,
-          voterIdBytes,
-          postPda,
+      let voterIdBytes: Uint8Array;
+      if (args.voter_agent_id.includes(",")) {
+        voterIdBytes = Uint8Array.from(
+          args.voter_agent_id.split(",").map((n) => Number(n.trim())),
         );
+      } else {
+        voterIdBytes = Buffer.from(
+          args.voter_agent_id.replace(/^0x/, ""),
+          "hex",
+        );
+      }
+      if (voterIdBytes.length !== 32) {
+        throw new Error("voter_agent_id must be exactly 32 bytes");
+      }
+
+      const postPda = new PublicKey(args.post_pda);
+      const result = await upvotePost(
+        connection,
+        program as any,
+        keypair,
+        voterIdBytes,
+        postPda,
+      );
 
         return toolTextResponse(
           [
@@ -193,17 +192,16 @@ export function registerSocialTools(server: McpServer): void {
     {
       post_pda: z.string().describe("Feed post PDA (base58)"),
     },
-    async (args) =>
-      withToolErrorResponse(async () => {
-        const program = getReadOnlyProgram();
-        const postPda = new PublicKey(args.post_pda);
-        const post = await fetchFeedPost(program, postPda);
-        if (!post) {
-          return toolTextResponse("Feed post not found at " + args.post_pda);
-        }
+    withToolErrorResponse(async (args) => {
+      const program = getReadOnlyProgram();
+      const postPda = new PublicKey(args.post_pda);
+      const post = await fetchFeedPost(program as any, postPda);
+      if (!post) {
+        return toolTextResponse("Feed post not found at " + args.post_pda);
+      }
 
-        return toolTextResponse(formatFeedPost(postPda, post));
-      }),
+      return toolTextResponse(formatFeedPost(postPda, post));
+    }),
   );
 
   // --------------------------------------------------------------------------
@@ -218,28 +216,27 @@ export function registerSocialTools(server: McpServer): void {
         .optional()
         .describe("Optional topic filter (e.g. 'research', 'governance')"),
     },
-    async (args) =>
-      withToolErrorResponse(async () => {
-        const program = getReadOnlyProgram();
-        const posts = args.topic
-          ? await fetchFeedPostsByTopic(program, args.topic)
-          : await fetchAllFeedPosts(program);
+    withToolErrorResponse(async (args) => {
+      const program = getReadOnlyProgram();
+      const posts = args.topic
+        ? await fetchFeedPostsByTopic(program as any, args.topic)
+        : await fetchAllFeedPosts(program as any);
 
-        if (posts.length === 0) {
-          return toolTextResponse(
-            args.topic
-              ? `No feed posts found for topic "${args.topic}".`
-              : "No feed posts found on-chain.",
-          );
-        }
-
-        const formatted = posts
-          .map((p, idx) => `[Post #${idx + 1}]\n${formatFeedPost(p.pda, p.account)}`)
-          .join("\n\n---\n\n");
-
+      if (posts.length === 0) {
         return toolTextResponse(
-          `Found ${posts.length} feed post(s):\n\n${formatted}`,
+          args.topic
+            ? `No feed posts found for topic "${args.topic}".`
+            : "No feed posts found on-chain.",
         );
-      }),
+      }
+
+      const formatted = posts
+        .map((p, idx) => `[Post #${idx + 1}]\n${formatFeedPost(p.pda, p.account)}`)
+        .join("\n\n---\n\n");
+
+      return toolTextResponse(
+        `Found ${posts.length} feed post(s):\n\n${formatted}`,
+      );
+    }),
   );
 }

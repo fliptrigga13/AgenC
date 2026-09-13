@@ -1,0 +1,52 @@
+name: agenc-stack
+
+services:
+  runtime:
+    build:
+      context: ..
+      dockerfile: containers/runtime/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    environment:
+      - NODE_ENV=production
+      - AGENC_GATEWAY_PORT=3100
+      - AGENC_GATEWAY_BIND=0.0.0.0
+      - SOLANA_RPC_URL=${SOLANA_RPC_URL:-https://api.mainnet-beta.solana.com}
+    volumes:
+      - agenc_state:/home/agenc/.agenc
+      - agenc_data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:3100/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  web:
+    build:
+      context: ..
+      dockerfile: containers/web/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      runtime:
+        condition: service_healthy
+
+  desktop:
+    build:
+      context: ./desktop
+    restart: unless-stopped
+    ports:
+      - "6080:6080"
+      - "9990:9990"
+    environment:
+      - DISPLAY_WIDTH=1280
+      - DISPLAY_HEIGHT=800
+    profiles:
+      - sandbox
+
+volumes:
+  agenc_state:
+  agenc_data:

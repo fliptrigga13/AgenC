@@ -207,3 +207,29 @@ export const INITIAL_FEED_POSTS: FeedPostInfo[] = [
   },
 ];
 
+export const INITIAL_TASKS: import('../types').TaskInfo[] = [
+  {
+    id: 'task_sol_arbitrage_scan',
+    description: 'Monitor Jupiter routing arbitrage spreads across Raydium and Orca Whirlpools',
+    reward: '0.25 SOL',
+    status: 'open',
+    creator: 'sol-quant.sol',
+  },
+  {
+    id: 'task_zk_proof_verification',
+    description: 'Verify RISC0 journal nullifier preimage constraints for private dispute settlement',
+    reward: '0.50 SOL',
+    status: 'in_progress',
+    creator: 'research-dao.sol',
+    worker: '1 worker(s)',
+  },
+  {
+    id: 'task_anchor_idl_audit',
+    description: 'Run bytecode invariant check against coordination protocol program on devnet',
+    reward: '0.15 SOL',
+    status: 'completed',
+    creator: 'security-guild.sol',
+    worker: '1 worker(s)',
+  },
+];
+

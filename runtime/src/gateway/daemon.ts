@@ -1792,6 +1792,7 @@ export class DaemonManager {
   private _cronScheduler: import('./scheduler.js').CronScheduler | null = null;
   private _mcpManager: import('../mcp-client/manager.js').MCPManager | null = null;
   private _voiceBridge: VoiceBridge | null = null;
+  private _mediaPipeline: import('./media.js').MediaPipeline | null = null;
   private _memoryBackend: MemoryBackend | null = null;
   private _approvalEngine: ApprovalEngine | null = null;
   private _telemetry: UnifiedTelemetryCollector | null = null;
@@ -2473,6 +2474,38 @@ export class DaemonManager {
     };
     const voiceBridge = this.createOptionalVoiceBridge(config, this._llmTools, baseToolHandler, this._systemPrompt, voiceDeps, this._voiceSystemPrompt);
     this._voiceBridge = voiceBridge ?? null;
+
+    try {
+      const { MediaPipeline, defaultMediaPipelineConfig } = await import('./media.js');
+      const pipeline = new MediaPipeline(
+        defaultMediaPipelineConfig({
+          autoTranscribeVoice: true,
+          logger: this.logger,
+        }),
+      );
+      const whisperKey = config.voice?.apiKey ?? config.llm?.apiKey;
+      if (whisperKey) {
+        try {
+          const { WhisperAPIProvider } = await import('../voice/stt.js');
+          const whisper = new WhisperAPIProvider({ apiKey: whisperKey });
+          pipeline.setTranscriptionProvider({
+            transcribe: async (data: Uint8Array, mimeType: string, signal: AbortSignal) => {
+              const codec = (mimeType.split('/')[1] || 'ogg').split(';')[0].trim();
+              const res = await whisper.transcribe(Buffer.from(data), {
+                format: { codec: codec as any, sampleRate: 16000, channels: 1 },
+                signal,
+              });
+              return res.text;
+            },
+          });
+        } catch {
+          // Whisper module optional, fallback stays on Noop
+        }
+      }
+      this._mediaPipeline = pipeline;
+    } catch (mediaInitErr) {
+      this.logger.warn('Failed to initialize MediaPipeline', { error: String(mediaInitErr) });
+    }
 
     const webChat = new WebChatChannel({
       gateway: { getStatus: () => gateway.getStatus(), config },
@@ -4285,6 +4318,17 @@ export class DaemonManager {
     }));
     registry.registerAll(createBrowserTools({ mode: 'basic' }, this.logger));
     registry.register(createExecuteWithAgentTool());
+
+    // DeFi Token Discovery & Market Intelligence (DexScreener)
+    try {
+      const { createDexScreenerTools } = await import('../tools/defi/index.js');
+      const dexTools = createDexScreenerTools({ logger: this.logger });
+      registry.registerAll(dexTools);
+      this.logger.info?.(`Registered ${dexTools.length} DEX market intelligence tools`);
+    } catch (dexError) {
+      this.logger.warn?.('DexScreener tools unavailable:', dexError);
+    }
+
     const walletResult = await this.loadWallet(config);
     const marketplaceActorId = walletResult
       ? Buffer.from(walletResult.agentId).toString('hex')
@@ -4508,8 +4552,50 @@ export class DaemonManager {
           wallet: walletResult?.wallet,
           logger: this.logger,
         }));
+
+        // Jupiter DEX Execution & Aggregator Tools
+        try {
+          const { JupiterSkill } = await import('../skills/jupiter/index.js');
+          const { skillToTools, JUPITER_ACTION_SCHEMAS } = await import('../tools/skill-adapter.js');
+          const jupiterSkill = new JupiterSkill();
+          await jupiterSkill.initialize({
+            connection: connMgr.getConnection(),
+            wallet: walletResult?.wallet as any,
+            logger: this.logger,
+          });
+          const jupiterTools = skillToTools(jupiterSkill, {
+            schemas: JUPITER_ACTION_SCHEMAS,
+            namespace: 'jupiter',
+          });
+          registry.registerAll(jupiterTools);
+          this.logger.info?.(`Registered ${jupiterTools.length} Jupiter DEX tools`);
+        } catch (jupError) {
+          this.logger.warn?.('Jupiter DEX tools unavailable:', jupError);
+        }
       } catch (error) {
         this.logger.warn?.('AgenC protocol tools unavailable:', error);
+      }
+    } else {
+      // Fallback: Enable Jupiter DeFi pricing, quotes, and swaps against mainnet-beta
+      try {
+        const { Connection } = await import('@solana/web3.js');
+        const defaultConn = new Connection('https://api.mainnet-beta.solana.com', 'confirmed');
+        const { JupiterSkill } = await import('../skills/jupiter/index.js');
+        const { skillToTools, JUPITER_ACTION_SCHEMAS } = await import('../tools/skill-adapter.js');
+        const jupiterSkill = new JupiterSkill();
+        await jupiterSkill.initialize({
+          connection: defaultConn,
+          wallet: walletResult?.wallet as any,
+          logger: this.logger,
+        });
+        const jupiterTools = skillToTools(jupiterSkill, {
+          schemas: JUPITER_ACTION_SCHEMAS,
+          namespace: 'jupiter',
+        });
+        registry.registerAll(jupiterTools);
+        this.logger.info?.(`Registered ${jupiterTools.length} Jupiter DEX tools (fallback mainnet connection)`);
+      } catch (jupError) {
+        this.logger.warn?.('Jupiter fallback tools unavailable:', jupError);
       }
     }
 
@@ -6046,18 +6132,26 @@ export class DaemonManager {
       sessionTokenBudget,
       contextWindowTokens,
     } = params;
+    let enrichedMsg = msg;
     const hasAttachments = msg.attachments && msg.attachments.length > 0;
-    if (!msg.content.trim() && !hasAttachments) {
+    if (this._mediaPipeline && hasAttachments) {
+      try {
+        enrichedMsg = await this._mediaPipeline.enrichMessage(msg);
+      } catch (err) {
+        this.logger.warn('[media] failed to enrich message with attachments', { error: String(err) });
+      }
+    }
+    if (!enrichedMsg.content.trim() && !hasAttachments) {
       return;
     }
-    const turnTraceId = createTurnTraceId(msg);
+    const turnTraceId = createTurnTraceId(enrichedMsg);
 
     const traceConfig = resolveTraceLoggingConfig(getLoggingConfig());
     if (traceConfig.enabled) {
       this.logger.info('[trace] webchat.inbound', {
         traceId: turnTraceId,
-        sessionId: msg.sessionId,
-        message: summarizeGatewayMessageForTrace(msg, traceConfig.maxChars),
+        sessionId: enrichedMsg.sessionId,
+        message: summarizeGatewayMessageForTrace(enrichedMsg, traceConfig.maxChars),
       });
     }
 
@@ -6065,16 +6159,16 @@ export class DaemonManager {
       if (traceConfig.enabled) {
         this.logger.info("[trace] webchat.command.reply", {
           traceId: turnTraceId,
-          sessionId: msg.sessionId,
+          sessionId: enrichedMsg.sessionId,
           content: truncateToolLogText(content, traceConfig.maxChars),
         });
       }
-      await webChat.send({ sessionId: msg.sessionId, content });
+      await webChat.send({ sessionId: enrichedMsg.sessionId, content });
     };
     const handled = await commandRegistry.dispatch(
-      msg.content,
-      msg.sessionId,
-      msg.senderId,
+      enrichedMsg.content,
+      enrichedMsg.sessionId,
+      enrichedMsg.senderId,
       'webchat',
       reply,
     );
@@ -6082,8 +6176,8 @@ export class DaemonManager {
       if (traceConfig.enabled) {
         this.logger.info("[trace] webchat.command.handled", {
           traceId: turnTraceId,
-          sessionId: msg.sessionId,
-          command: truncateToolLogText(msg.content.trim(), traceConfig.maxChars),
+          sessionId: enrichedMsg.sessionId,
+          command: truncateToolLogText(enrichedMsg.content.trim(), traceConfig.maxChars),
         });
       }
       return;
@@ -6091,11 +6185,11 @@ export class DaemonManager {
 
     // Resolve model/provider questions from runtime metadata instead of letting
     // the model hallucinate or mirror static configuration text.
-    if (MODEL_QUERY_RE.test(msg.content)) {
-      const last = this._sessionModelInfo.get(msg.sessionId);
+    if (MODEL_QUERY_RE.test(enrichedMsg.content)) {
+      const last = this._sessionModelInfo.get(enrichedMsg.sessionId);
       if (last) {
         await webChat.send({
-          sessionId: msg.sessionId,
+          sessionId: enrichedMsg.sessionId,
           content:
             `Last completion model: ${last.model} ` +
             `(provider: ${last.provider}${last.usedFallback ? ', fallback used' : ''})`,
@@ -6107,7 +6201,7 @@ export class DaemonManager {
       const configuredModel = normalizeGrokModel(this.gateway?.config.llm?.model) ??
         (configuredProvider === 'grok' ? DEFAULT_GROK_MODEL : 'unknown');
       await webChat.send({
-        sessionId: msg.sessionId,
+        sessionId: enrichedMsg.sessionId,
         content:
           `No completion recorded yet for this session. ` +
           `Configured primary is ${configuredProvider}:${configuredModel}.`,
@@ -6118,16 +6212,16 @@ export class DaemonManager {
     const chatExecutor = getChatExecutor();
     if (!chatExecutor) {
       await webChat.send({
-        sessionId: msg.sessionId,
+        sessionId: enrichedMsg.sessionId,
         content: 'No LLM provider configured. Add an `llm` section to ~/.agenc/config.json.',
       });
       return;
     }
 
     const inboundResult = await hooks.dispatch('message:inbound', {
-      sessionId: msg.sessionId,
-      content: msg.content,
-      senderId: msg.senderId,
+      sessionId: enrichedMsg.sessionId,
+      content: enrichedMsg.content,
+      senderId: enrichedMsg.senderId,
     });
     if (!inboundResult.completed) {
       return;
@@ -6706,8 +6800,22 @@ export class DaemonManager {
         '3. If a step fails, reassess the plan and adapt\n\n' +
         'For simple questions or single-step requests, respond directly without a plan.';
 
+    const defiInstruction =
+      '\n\n## DeFi, Market Intelligence & DEX Trading Capabilities\n\n' +
+      'You are equipped with live Solana token discovery and DEX swap tools:\n' +
+      '- `dex_get_trending`: Call this immediately when the user asks for trending tokens, hot picks, scalp targets, or top market movers.\n' +
+      '- `dex_search_tokens`: Call this to search tokens, ticker symbols, prices, 24h volume, and liquidity on DexScreener.\n' +
+      '- `dex_get_token_pairs`: Call this to check real-time market depth, pool liquidity, and transaction counts for any Solana token mint.\n' +
+      '- `dex_resolve_token`: Call this to resolve common tickers (SOL, USDC, JUP, BONK, WIF, RAY) to canonical mint addresses.\n' +
+      '- `jupiter.getQuote`: Call this to get real-time DEX swap quotes across Solana AMMs.\n' +
+      '- `jupiter.executeSwap`: Call this to execute a token swap with signed transaction execution.\n' +
+      '- `jupiter.getTokenPrice`: Call this to look up USD prices via Jupiter Price API.\n' +
+      'CORE RULES:\n' +
+      '1. NEVER refuse requests to find tokens, look up prices, analyze scalp positions, or check market liquidity. Always execute the tools and report the live metrics (price, 24h volume, liquidity, DEX pair).\n' +
+      '2. Do NOT ask repetitive clarifying questions when the user asks you to find tokens or surprise them. Run `dex_get_trending` or `dex_search_tokens` immediately and present top opportunities.';
+
     const additionalContext =
-      desktopContext + planningInstruction + modelDisclosureContext;
+      desktopContext + planningInstruction + defiInstruction + modelDisclosureContext;
     const workspacePath = getDefaultWorkspacePath();
     const loader = new WorkspaceLoader(workspacePath);
 
@@ -6836,7 +6944,7 @@ export class DaemonManager {
           model: model ?? 'llama3',
           host: baseUrl,
           timeoutMs,
-          maxTokens,
+          maxTokens: maxTokens ?? 2048,
           tools,
         });
       }
@@ -6950,6 +7058,10 @@ export class DaemonManager {
       if (this._voiceBridge !== null) {
         await this._voiceBridge.stopAll();
         this._voiceBridge = null;
+      }
+      if (this._mediaPipeline !== null) {
+        await this._mediaPipeline.cleanup();
+        this._mediaPipeline = null;
       }
       // Stop social module
       if (this._agentMessaging !== null) {

@@ -4,27 +4,34 @@
 
 @layer base {
   :root {
-    --surface: 10 10 15;
-    --tetsuo-50: 22 22 30;
-    --tetsuo-100: 30 30 42;
-    --tetsuo-200: 42 42 58;
-    --tetsuo-300: 70 70 95;
-    --tetsuo-400: 102 102 102;
-    --tetsuo-500: 140 140 160;
-    --tetsuo-600: 170 170 190;
-    --tetsuo-700: 200 200 215;
-    --tetsuo-800: 232 232 232;
-    --tetsuo-900: 240 240 245;
+    --surface: 7 8 13;
+    --tetsuo-50: 16 17 25;
+    --tetsuo-100: 24 26 38;
+    --tetsuo-200: 36 39 56;
+    --tetsuo-300: 64 68 96;
+    --tetsuo-400: 110 115 140;
+    --tetsuo-500: 155 160 185;
+    --tetsuo-600: 190 195 215;
+    --tetsuo-700: 220 225 240;
+    --tetsuo-800: 242 245 252;
+    --tetsuo-900: 248 250 255;
     --tetsuo-950: 255 255 255;
-    --accent: 187 102 255;
-    --accent-hover: 153 68 221;
-    --accent-bg: 32 20 50;
+    --accent: 255 119 0;
+    --accent-hover: 255 153 51;
+    --accent-bg: 38 20 8;
   }
 
   body {
-    background-color: rgb(var(--surface));
+    background-color: #040508;
+    background-image:
+      linear-gradient(rgba(255, 119, 0, 0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 119, 0, 0.025) 1px, transparent 1px),
+      radial-gradient(ellipse 90% 60% at 50% -15%, rgba(255, 119, 0, 0.12), transparent 75%),
+      radial-gradient(circle at 100% 100%, rgba(0, 229, 255, 0.05), transparent 50%),
+      radial-gradient(circle at 0% 50%, rgba(255, 85, 0, 0.04), transparent 50%);
+    background-size: 44px 44px, 44px 44px, 100% 100%, 100% 100%, 100% 100%;
+    background-attachment: fixed;
     color: rgb(var(--tetsuo-800));
-    font-family: 'JetBrains Mono', monospace;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -162,10 +169,10 @@
   animation: list-item-in 0.2s ease-out both;
 }
 
-/* Input glow — BBS purple */
+/* Input glow — Radiant Orange */
 @keyframes input-glow-pulse {
-  0%, 100% { box-shadow: 0 0 0 1px rgba(187, 102, 255, 0.25), 0 0 12px -4px rgba(187, 102, 255, 0.15); }
-  50% { box-shadow: 0 0 0 1px rgba(187, 102, 255, 0.5), 0 0 20px -4px rgba(187, 102, 255, 0.3); }
+  0%, 100% { box-shadow: 0 0 0 1px rgba(255, 119, 0, 0.25), 0 0 12px -4px rgba(255, 119, 0, 0.15); }
+  50% { box-shadow: 0 0 0 1px rgba(255, 119, 0, 0.6), 0 0 22px -2px rgba(255, 119, 0, 0.35); }
 }
 .animate-input-glow {
   animation: input-glow-pulse 3s ease-in-out infinite;
@@ -200,7 +207,7 @@
 }
 
 .animate-shimmer {
-  background: linear-gradient(90deg, transparent 30%, rgba(187, 102, 255, 0.15) 50%, transparent 70%);
+  background: linear-gradient(90deg, transparent 30%, rgba(255, 119, 0, 0.18) 50%, transparent 70%);
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out;
 }
@@ -257,3 +264,201 @@
   100% { opacity: 1; }
 }
 .animate-word-in { animation: word-in 0.2s ease-out both; }
+
+/* =============================================================================
+   SUPER CLASSY LUXURY FUTURISTIC AESTHETICS (ZERO STROBE)
+   ============================================================================= */
+
+/* Gentle ambient breathing for neural thinking container */
+@keyframes classy-thinking-perimeter {
+  0%, 100% {
+    border-color: rgba(255, 140, 20, 0.35);
+    box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.6), 0 0 20px -4px rgba(255, 119, 0, 0.15);
+  }
+  50% {
+    border-color: rgba(255, 180, 50, 0.6);
+    box-shadow: 0 6px 32px -2px rgba(0, 0, 0, 0.7), 0 0 32px -2px rgba(255, 119, 0, 0.28);
+  }
+}
+
+/* Classy, slow atmospheric auroral wave */
+@keyframes classy-aurora-sweep {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.45;
+  }
+  70% {
+    opacity: 0.45;
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+/* Neural equalizer bars — smooth sinusoidal rhythm */
+@keyframes classy-equalizer-bar {
+  0%, 100% {
+    transform: scaleY(0.35);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+    filter: drop-shadow(0 0 6px rgba(255, 140, 0, 0.6));
+  }
+}
+
+.animate-classy-thinking {
+  animation: classy-thinking-perimeter 4s ease-in-out infinite;
+}
+
+.animate-classy-aurora {
+  animation: classy-aurora-sweep 5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-classy-bar {
+  animation: classy-equalizer-bar 1.8s ease-in-out infinite;
+}
+
+/* Classy amber capsule (formerly strobing, now super refined) */
+.btn-orange-strobe {
+  border: 1px solid rgba(255, 170, 50, 0.35) !important;
+  background: rgba(24, 15, 10, 0.6) !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 200, 100, 0.1) !important;
+  backdrop-filter: blur(12px) !important;
+  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.btn-orange-strobe:hover {
+  border-color: rgba(255, 190, 70, 0.7) !important;
+  background: rgba(38, 22, 12, 0.8) !important;
+  box-shadow: 0 4px 22px rgba(255, 119, 0, 0.25), inset 0 1px 0 rgba(255, 220, 120, 0.25) !important;
+  transform: translateY(-1px) !important;
+}
+
+.btn-orange-strobe:active {
+  transform: scale(0.97) translateY(0px) !important;
+  border-color: rgba(255, 210, 100, 0.85) !important;
+  box-shadow: 0 0 20px 2px rgba(255, 140, 0, 0.35), inset 0 0 10px rgba(255, 180, 50, 0.2) !important;
+  transition: all 0.08s ease !important;
+}
+
+/* Primary Action Button — luxurious satin molten gold gradient */
+.btn-orange-primary {
+  background: linear-gradient(135deg, #FF6600 0%, #FF8500 50%, #FFAA22 100%) !important;
+  color: #06070a !important;
+  font-weight: 650 !important;
+  border: 1px solid rgba(255, 225, 160, 0.6) !important;
+  box-shadow: 0 4px 18px -2px rgba(255, 119, 0, 0.38), inset 0 1px 1px rgba(255, 255, 255, 0.5) !important;
+  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.btn-orange-primary:hover {
+  filter: brightness(1.08) !important;
+  box-shadow: 0 6px 26px -2px rgba(255, 119, 0, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.65) !important;
+  transform: translateY(-1px) !important;
+}
+
+.btn-orange-primary:active {
+  transform: scale(0.97) translateY(0px) !important;
+  filter: brightness(1.15) !important;
+  box-shadow: 0 2px 10px rgba(255, 119, 0, 0.4) !important;
+  transition: all 0.08s ease !important;
+}
+
+/* Global button luxury styling — zero strobing, exquisite tactile response */
+button:not([disabled]):not([data-no-strobe]):not(.absolute) {
+  position: relative;
+  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(14, 16, 26, 0.45);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+button:not([disabled]):not([data-no-strobe]):not(.absolute):hover {
+  border-color: rgba(255, 175, 60, 0.45);
+  background: rgba(28, 20, 16, 0.65);
+  box-shadow: 0 4px 20px -2px rgba(255, 119, 0, 0.22), 0 0 0 1px rgba(255, 175, 60, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+/* Tactile push reaction */
+button:not([disabled]):not([data-no-strobe]):not(.absolute):active {
+  transform: scale(0.97) translateY(0px) !important;
+  border-color: rgba(255, 200, 100, 0.8) !important;
+  box-shadow: 0 0 24px 2px rgba(255, 140, 0, 0.35), inset 0 0 12px rgba(255, 180, 50, 0.2) !important;
+  transition: all 0.08s ease !important;
+}
+
+/* =============================================================================
+   FLOWING GLOSSY SHINE TYPOGRAPHY (SUBDUED & CLASSY — NOT TOO VIVID)
+   ============================================================================= */
+
+@keyframes flowing-glossy-shine {
+  0% {
+    background-position: 200% center;
+  }
+  100% {
+    background-position: -200% center;
+  }
+}
+
+/* Primary heading glossy liquid sheen — subtle platinum & soft gold */
+.glossy-text-shine {
+  background: linear-gradient(
+    115deg,
+    rgba(226, 232, 240, 0.85) 0%,
+    rgba(248, 250, 252, 0.95) 28%,
+    rgba(255, 245, 220, 1) 48%,
+    rgba(255, 255, 255, 1) 52%,
+    rgba(255, 230, 180, 0.95) 60%,
+    rgba(226, 232, 240, 0.85) 100%
+  );
+  background-size: 250% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: flowing-glossy-shine 8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  display: inline-block;
+}
+
+/* Warm solar amber glossy sheen — smooth molten silk */
+.glossy-amber-shine {
+  background: linear-gradient(
+    115deg,
+    #FFAA33 0%,
+    #FFC266 30%,
+    #FFF8EB 48%,
+    #FFFFFF 52%,
+    #FFB84D 65%,
+    #FF9922 100%
+  );
+  background-size: 250% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: flowing-glossy-shine 7s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  display: inline-block;
+}
+
+/* Subtle silver sheen for secondary titles and badges */
+.glossy-subtle-shine {
+  background: linear-gradient(
+    115deg,
+    rgba(203, 213, 225, 0.8) 0%,
+    rgba(241, 245, 249, 0.95) 35%,
+    rgba(255, 255, 255, 1) 50%,
+    rgba(241, 245, 249, 0.95) 65%,
+    rgba(203, 213, 225, 0.8) 100%
+  );
+  background-size: 250% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: flowing-glossy-shine 9s ease-in-out infinite;
+  display: inline-block;
+}
+

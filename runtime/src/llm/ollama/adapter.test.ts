@@ -371,4 +371,160 @@ describe("OllamaProvider", () => {
     ).rejects.toThrow(/tool_result_without_assistant_call/);
     expect(mockChat).not.toHaveBeenCalled();
   });
+
+  it("extracts tool call from content when model emits JSON instead of tool_calls", async () => {
+    mockChat.mockResolvedValueOnce(
+      makeResponse({
+        message: {
+          content: JSON.stringify({
+            name: "dex_search_tokens",
+            arguments: { query: "Solana" },
+          }),
+          role: "assistant",
+          tool_calls: [],
+        },
+      }),
+    );
+
+    const provider = new OllamaProvider({
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "dex_search_tokens",
+            description: "Search DEX tokens",
+            parameters: { type: "object" },
+          },
+        },
+      ],
+    });
+
+    const result = await provider.chat([{ role: "user", content: "find solana tokens" }]);
+    expect(result.toolCalls).toHaveLength(1);
+    expect(result.toolCalls[0].name).toBe("dex_search_tokens");
+    expect(JSON.parse(result.toolCalls[0].arguments)).toEqual({ query: "Solana" });
+    expect(result.finishReason).toBe("tool_calls");
+    expect(result.content).toBe("");
+  });
+
+  it("extracts tool call from markdown code block during chatStream", async () => {
+    const chunks = [
+      {
+        message: {
+          content:
+            'Searching DEX:\n```json\n{\n  "name": "dex_search_tokens",\n  "arguments": {"query": "SOL"}\n}\n```',
+        },
+        model: "qwen2.5-coder:7b",
+      },
+    ];
+    mockChat.mockResolvedValueOnce(
+      (async function* () {
+        for (const c of chunks) yield c;
+      })(),
+    );
+
+    const provider = new OllamaProvider({
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "dex_search_tokens",
+            description: "Search DEX tokens",
+            parameters: { type: "object" },
+          },
+        },
+      ],
+    });
+
+    const onChunk = vi.fn();
+    const result = await provider.chatStream(
+      [{ role: "user", content: "find solana" }],
+      onChunk,
+    );
+
+    expect(result.toolCalls).toHaveLength(1);
+    expect(result.toolCalls[0].name).toBe("dex_search_tokens");
+    expect(result.finishReason).toBe("tool_calls");
+    expect(result.content).toBe("Searching DEX:");
+  });
+
+  it("gracefully recovers when stream throws 'Did not receive done or success response in stream'", async () => {
+    mockChat.mockResolvedValueOnce(
+      (async function* () {
+        yield {
+          message: {
+            content: '{\n  "name": "dex_search_tokens",\n  "arguments": {"query": "JUP"}\n}',
+          },
+          model: "qwen2.5-coder:7b",
+        };
+        throw new Error("Did not receive done or success response in stream.");
+      })(),
+    );
+
+    const provider = new OllamaProvider({
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "dex_search_tokens",
+            description: "Search DEX tokens",
+            parameters: { type: "object" },
+          },
+        },
+      ],
+    });
+
+    const onChunk = vi.fn();
+    const result = await provider.chatStream(
+      [{ role: "user", content: "find jupiter" }],
+      onChunk,
+    );
+
+    expect(result.finishReason).toBe("tool_calls");
+    expect(result.toolCalls).toHaveLength(1);
+    expect(result.toolCalls[0].name).toBe("dex_search_tokens");
+    expect(JSON.parse(result.toolCalls[0].arguments)).toEqual({ query: "JUP" });
+  });
+
+  it("formats assistant message with tool_calls for Ollama multi-turn context", async () => {
+    mockChat.mockResolvedValueOnce(makeResponse());
+
+    const provider = new OllamaProvider({});
+    await provider.chat([
+      { role: "user", content: "test" },
+      {
+        role: "assistant",
+        content: "",
+        toolCalls: [
+          {
+            id: "call_1",
+            name: "dex_search_tokens",
+            arguments: '{"query":"BONK"}',
+          },
+        ],
+      },
+      {
+        role: "tool",
+        content: '{"price":0.00002}',
+        toolCallId: "call_1",
+        toolName: "dex_search_tokens",
+      },
+    ]);
+
+    const params = mockChat.mock.calls[0][0];
+    expect(params.messages[1]).toEqual({
+      role: "assistant",
+      content: "",
+      tool_calls: [
+        {
+          id: "call_1",
+          type: "function",
+          function: {
+            name: "dex_search_tokens",
+            arguments: { query: "BONK" },
+          },
+        },
+      ],
+    });
+  });
 });

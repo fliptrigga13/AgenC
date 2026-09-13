@@ -22,6 +22,7 @@ import { useActivityFeed } from './hooks/useActivityFeed';
 import { useAgents } from './hooks/useAgents';
 import { useDesktop } from './hooks/useDesktop';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { QuantumCursorLighting } from './components/effects/QuantumCursorLighting';
 import { BBSHeader } from './components/BBSHeader';
 import { BBSMenuBar } from './components/BBSMenuBar';
 import { BBSStatusBar } from './components/BBSStatusBar';
@@ -39,6 +40,8 @@ import { DesktopView } from './components/desktop/DesktopView';
 import { MarketplaceView } from './components/marketplace/MarketplaceView';
 import { GovernanceView } from './components/governance/GovernanceView';
 import { ReputationView } from './components/reputation/ReputationView';
+import { RevenueEngineDrawer } from './components/revenue/RevenueEngineDrawer';
+import { useRevenueEngine } from './hooks/useRevenueEngine';
 import {
   INITIAL_MARKETPLACE_SKILLS,
   INITIAL_GOVERNANCE_PROPOSALS,
@@ -92,7 +95,7 @@ function restoreComposerFocus(snapshot: ComposerFocusSnapshot) {
 
     if (!activeIsNeutral) return;
 
-    target.focus();
+    target.focus({ preventScroll: true });
     const start = Math.min(snapshot.selectionStart, target.value.length);
     const end = Math.min(snapshot.selectionEnd, target.value.length);
     target.setSelectionRange(start, end);
@@ -141,6 +144,33 @@ export default function App() {
   const [desktopPanelOpen, setDesktopPanelOpen] = useState(false);
   const prevVncUrl = useRef<string | null>(null);
   const suppressNextVoiceTranscript = useRef(false);
+
+  const [bountyNotice, setBountyNotice] = useState<{
+    reward: number;
+    description: string;
+    txHash: string;
+  } | null>(null);
+
+  const handleClaimTask = useCallback((taskId: string) => {
+    const res = tasks.claim(taskId);
+    if (res && res.rewardSol > 0) {
+      walletInfo.creditEarnings(res.rewardSol);
+      setBountyNotice({
+        reward: res.rewardSol,
+        description: res.task.description || 'Escrow Bounty',
+        txHash: res.txHash,
+      });
+      setTimeout(() => setBountyNotice(null), 6000);
+    }
+  }, [tasks, walletInfo]);
+
+  const [revenueDrawerOpen, setRevenueDrawerOpen] = useState(false);
+
+  const revenueEngine = useRevenueEngine({
+    onCreditEarnings: walletInfo.creditEarnings,
+    tasks: tasks.tasks,
+    onClaimTask: handleClaimTask,
+  });
 
   const sessionDesktopUrl = useMemo(
     () => desktop.vncUrlForSession(chat.sessionId)
@@ -437,10 +467,16 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <div className="flex flex-col h-screen bg-bbs-black">
+      <div className="relative flex flex-col h-screen bg-[#040508] overflow-hidden">
+        {/* Dynamic GPU-accelerated interactive cursor lighting & shockwave visualizer */}
+        <QuantumCursorLighting />
+
         <BBSHeader
           connectionState={connectionState}
           approvalCount={approvals.pending.length}
+          totalEarnedSol={revenueEngine.stats.totalEarnedSol}
+          isRevenueEngineActive={revenueEngine.isActive}
+          onOpenRevenueEngine={() => setRevenueDrawerOpen(true)}
         />
         <BBSMenuBar
           currentView={currentView}
@@ -477,6 +513,7 @@ export default function App() {
               desktopOpen={desktopPanelOpen}
               onToggleDesktop={toggleDesktopPanel}
               tokenUsage={chat.tokenUsage}
+              onOpenRevenueEngine={() => setRevenueDrawerOpen(true)}
             />
           )}
           {currentView === 'status' && (
@@ -498,6 +535,7 @@ export default function App() {
               onRefresh={tasks.refresh}
               onCreate={tasks.create}
               onCancel={tasks.cancel}
+              onClaim={handleClaimTask}
             />
           )}
           {currentView === 'memory' && (
@@ -567,6 +605,39 @@ export default function App() {
           )}
         </main>
 
+        {bountyNotice && (
+          <div className="fixed top-20 right-6 z-50 animate-panel-enter max-w-sm">
+            <div className="p-4 rounded-xl bg-[#090b14]/95 border border-amber-500/40 shadow-[0_4px_30px_rgba(255,119,0,0.35)] backdrop-blur-xl flex items-start gap-3">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-amber-600 to-amber-400 text-black flex items-center justify-center shrink-0 shadow-sm font-bold text-base">
+                ⚡
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-amber-400 font-heading uppercase tracking-wider">
+                    Bounty Reward Settled
+                  </span>
+                  <button
+                    onClick={() => setBountyNotice(null)}
+                    className="text-slate-500 hover:text-white text-xs leading-none"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="text-sm font-bold text-white mt-0.5">
+                  +{bountyNotice.reward.toFixed(4)} SOL
+                </div>
+                <div className="text-[11px] text-slate-300 truncate mt-0.5">
+                  {bountyNotice.description}
+                </div>
+                <div className="text-[10px] font-mono text-emerald-400 mt-1 flex items-center gap-1">
+                  <span>Tx:</span>
+                  <span className="text-slate-400">{bountyNotice.txHash}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <BBSStatusBar />
 
         {selectedApproval && (
@@ -577,6 +648,21 @@ export default function App() {
             onClose={() => setSelectedApproval(null)}
           />
         )}
+
+        <RevenueEngineDrawer
+          isOpen={revenueDrawerOpen}
+          onClose={() => setRevenueDrawerOpen(false)}
+          isActive={revenueEngine.isActive}
+          onToggleActive={revenueEngine.toggleActive}
+          frequencySeconds={revenueEngine.frequencySeconds}
+          onSetFrequency={revenueEngine.setFrequencySeconds}
+          isExecutingCycle={revenueEngine.isExecutingCycle}
+          onTriggerInstantCycle={revenueEngine.triggerInstantCycle}
+          stats={revenueEngine.stats}
+          transactions={revenueEngine.transactions}
+          onClearLedger={revenueEngine.clearLedger}
+          currentWalletSol={walletInfo.wallet?.sol ?? 0}
+        />
       </div>
     </ErrorBoundary>
   );

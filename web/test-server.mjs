@@ -18,11 +18,22 @@ const require = createRequire(import.meta.url);
 const ws = require('ws');
 const WebSocketServer = ws.WebSocketServer || ws.Server;
 
+let web3;
+try {
+  web3 = await import('@solana/web3.js');
+} catch {
+  // fallback if not available
+}
+
+const DEVNET_ADDRESS = 'vAi8y9ZNnxhHkWrmNFZe6vbHmGBTooebSVtxJq5n14i';
+let localBalanceLamports = 2_000_000_000; // 2 SOL starting Devnet balance
+
 const PORT = Number(process.env.WEBCHAT_WS_PORT ?? process.env.WS_PORT ?? 3100);
 const HOST = '127.0.0.1';
 const CHAT_SESSION_ID = 'session_local_1';
 
 const PORTFACING_SKILLS = [
+  { name: 'solana-whale-radar', description: 'Live Mainnet Whale & Smart-Money Radar', enabled: true },
   { name: 'jupiter-dex', description: 'Jupiter DEX swap integration', enabled: true },
   { name: 'web-search', description: 'Search the web for information', enabled: true },
   { name: 'code-exec', description: 'Execute code in sandbox', enabled: false },
@@ -95,7 +106,7 @@ wss.on('connection', (ws) => {
   clients.set(clientId, ws);
   console.log(`[+] ${clientId} connected`);
 
-  ws.on('message', (raw) => {
+  ws.on('message', async (raw) => {
     let msg;
     try {
       msg = JSON.parse(raw.toString());
@@ -283,32 +294,59 @@ wss.on('connection', (ws) => {
         }));
         break;
 
-      case 'wallet.info':
+      case 'wallet.info': {
+        let lamports = localBalanceLamports;
+        if (web3?.Connection && web3?.PublicKey) {
+          try {
+            const connection = new web3.Connection('https://api.devnet.solana.com', 'confirmed');
+            const onchainLamports = await connection.getBalance(new web3.PublicKey(DEVNET_ADDRESS));
+            if (onchainLamports > 0) {
+              lamports = onchainLamports;
+              localBalanceLamports = onchainLamports;
+            }
+          } catch {
+            // keep local devnet balance
+          }
+        }
         ws.send(JSON.stringify({
           type: 'wallet.info',
           payload: {
-            address: '8uM6m....DemoWallet',
-            lamports: 12_500_000_000,
-            sol: 12.5,
+            address: DEVNET_ADDRESS,
+            lamports: lamports,
+            sol: Number((lamports / 1e9).toFixed(4)),
             network: 'devnet',
             rpcUrl: 'https://api.devnet.solana.com',
-            explorerUrl: 'https://explorer.solana.com/address/8uM6m....DemoWallet',
+            explorerUrl: `https://explorer.solana.com/address/${DEVNET_ADDRESS}?cluster=devnet`,
           },
           id,
         }));
         break;
+      }
 
-      case 'wallet.airdrop':
+      case 'wallet.airdrop': {
+        const requestedSol = typeof payload.amount === 'number' ? payload.amount : 1;
+        localBalanceLamports += Math.round(requestedSol * 1e9);
+
+        if (web3?.Connection && web3?.PublicKey) {
+          try {
+            const connection = new web3.Connection('https://api.devnet.solana.com', 'confirmed');
+            await connection.requestAirdrop(new web3.PublicKey(DEVNET_ADDRESS), Math.round(requestedSol * 1e9));
+          } catch {
+            // faucet busy/rate-limited; local credited
+          }
+        }
+
         ws.send(JSON.stringify({
           type: 'wallet.airdrop',
           payload: {
             requestId: payload.requestId,
-            newLamports: 12_800_000_000,
-            newBalance: 12.8,
+            newLamports: localBalanceLamports,
+            newBalance: Number((localBalanceLamports / 1e9).toFixed(4)),
           },
           id,
         }));
         break;
+      }
 
       case 'events.subscribe':
         setTimeout(() => {

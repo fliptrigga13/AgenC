@@ -19,12 +19,10 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { randomBytes } from "node:crypto";
 import {
-  getReadOnlyProgram,
   getSigningProgram,
   getConnection,
   getCurrentProgramId,
 } from "../utils/connection.js";
-import { safePubkey } from "../utils/formatting.js";
 import { toolTextResponse, withToolErrorResponse } from "./response.js";
 
 function renderDependencyTree(node: TaskDependencyNode, prefix = ""): string {
@@ -82,65 +80,66 @@ export function registerCoordinationTools(server: McpServer): void {
         .default("0")
         .describe("Required capabilities bitmask (uint64 as string)"),
     },
-    async (args) =>
-      withToolErrorResponse(async () => {
-        const { program, wallet } = getSigningProgram();
-        const connection = getConnection();
+    withToolErrorResponse(async (args) => {
+      const { program, keypair } = await getSigningProgram();
+      const connection = getConnection();
 
-        let creatorIdBytes: Uint8Array;
-        if (args.creator_agent_id.includes(",")) {
-          creatorIdBytes = Uint8Array.from(
-            args.creator_agent_id.split(",").map((n) => Number(n.trim())),
-          );
-        } else {
-          creatorIdBytes = Buffer.from(
-            args.creator_agent_id.replace(/^0x/, ""),
-            "hex",
-          );
-        }
-        if (creatorIdBytes.length !== 32) {
-          throw new Error("creator_agent_id must be exactly 32 bytes");
-        }
-
-        const parentTaskPda = new PublicKey(args.parent_task_pda);
-        const taskId = randomBytes(32);
-        const rewardLamports = BigInt(
-          Math.round(args.reward_sol * LAMPORTS_PER_SOL),
+      let creatorIdBytes: Uint8Array;
+      if (args.creator_agent_id.includes(",")) {
+        creatorIdBytes = Uint8Array.from(
+          args.creator_agent_id.split(",").map((n) => Number(n.trim())),
         );
-        const deadline = Math.floor(Date.now() / 1000) + args.deadline_seconds;
-
-        const params: DependentTaskParams = {
-          taskId,
-          requiredCapabilities: BigInt(args.required_capabilities),
-          description: args.description,
-          rewardAmount: rewardLamports,
-          maxWorkers: 1,
-          deadline,
-          taskType: 0,
-          dependencyType: args.dependency_type,
-          parentTask: parentTaskPda,
-        };
-
-        const result = await createDependentTask(
-          connection,
-          program,
-          wallet,
-          creatorIdBytes,
-          parentTaskPda,
-          params,
+      } else {
+        creatorIdBytes = Buffer.from(
+          args.creator_agent_id.replace(/^0x/, ""),
+          "hex",
         );
+      }
+      if (creatorIdBytes.length !== 32) {
+        throw new Error("creator_agent_id must be exactly 32 bytes");
+      }
 
-        return toolTextResponse(
-          [
-            "=== Dependent Task Created Successfully ===",
-            "Child Task PDA: " + result.taskPda.toBase58(),
-            "Parent Task PDA: " + parentTaskPda.toBase58(),
-            "Reward: " + args.reward_sol + " SOL",
-            "Dependency Type: " + args.dependency_type,
-            "Transaction Signature: " + result.txSignature,
-          ].join("\n"),
-        );
-      }),
+      const parentTaskPda = new PublicKey(args.parent_task_pda);
+      const taskId = randomBytes(32);
+      const rewardLamports = BigInt(
+        Math.round(args.reward_sol * LAMPORTS_PER_SOL),
+      );
+      const deadline = Math.floor(Date.now() / 1000) + args.deadline_seconds;
+
+      const descBuffer = Buffer.alloc(64);
+      Buffer.from(args.description, "utf8").copy(descBuffer);
+
+      const params: DependentTaskParams = {
+        taskId,
+        requiredCapabilities: BigInt(args.required_capabilities || "0"),
+        description: descBuffer,
+        rewardAmount: rewardLamports,
+        maxWorkers: 1,
+        deadline,
+        taskType: 0,
+        dependencyType: args.dependency_type,
+      };
+
+      const result = await createDependentTask(
+        connection,
+        program as any,
+        keypair,
+        creatorIdBytes,
+        parentTaskPda,
+        params,
+      );
+
+      return toolTextResponse(
+        [
+          "=== Dependent Task Created Successfully ===",
+          "Child Task PDA: " + result.taskPda.toBase58(),
+          "Parent Task PDA: " + parentTaskPda.toBase58(),
+          "Reward: " + args.reward_sol + " SOL",
+          "Dependency Type: " + args.dependency_type,
+          "Transaction Signature: " + result.txSignature,
+        ].join("\n"),
+      );
+    }),
   );
 
   // --------------------------------------------------------------------------
@@ -160,30 +159,29 @@ export function registerCoordinationTools(server: McpServer): void {
         .default(10)
         .describe("Maximum tree traversal depth (default: 10)"),
     },
-    async (args) =>
-      withToolErrorResponse(async () => {
-        const connection = getConnection();
-        const programId = getCurrentProgramId();
-        const rootPda = new PublicKey(args.root_task_pda);
+    withToolErrorResponse(async (args) => {
+      const connection = getConnection();
+      const programId = getCurrentProgramId();
+      const rootPda = new PublicKey(args.root_task_pda);
 
-        const tree = await getTaskDependencyTree(
-          connection,
-          programId,
-          rootPda,
-          args.max_depth,
-        );
+      const tree = await getTaskDependencyTree(
+        connection,
+        programId,
+        rootPda,
+        args.max_depth,
+      );
 
-        const rendered = renderDependencyTree(tree);
+      const rendered = renderDependencyTree(tree);
 
-        return toolTextResponse(
-          [
-            "=== Task Dependency DAG ===",
-            "Root: " + rootPda.toBase58(),
-            "",
-            rendered,
-          ].join("\n"),
-        );
-      }),
+      return toolTextResponse(
+        [
+          "=== Task Dependency DAG ===",
+          "Root: " + rootPda.toBase58(),
+          "",
+          rendered,
+        ].join("\n"),
+      );
+    }),
   );
 
   // --------------------------------------------------------------------------
@@ -207,43 +205,40 @@ export function registerCoordinationTools(server: McpServer): void {
         .min(1)
         .describe("List of tasks and their parent dependencies"),
     },
-    async (args) =>
-      withToolErrorResponse(async () => {
-        const nodes = args.tasks.map((t) => ({
-          taskPda: new PublicKey(t.task_pda),
-          dependsOn: t.depends_on_pda ? new PublicKey(t.depends_on_pda) : null,
-        }));
+    withToolErrorResponse(async (args) => {
+      const nodes = args.tasks.map((t) => ({
+        taskPda: new PublicKey(t.task_pda),
+        dependsOn: t.depends_on_pda ? new PublicKey(t.depends_on_pda) : null,
+      }));
 
-        const result = sortTaskDependencyDag(nodes);
+      const result = sortTaskDependencyDag(nodes);
 
-        if (result.hasCycle) {
-          const cycleStr = (result.cycleNodes ?? [])
-            .map((p) => p.toBase58())
-            .join(", ");
-          return toolTextResponse(
-            [
-              "=== INVALID DAG: Circular Dependency Detected! ===",
-              "The following tasks form an unresolved circular loop:",
-              cycleStr,
-              "",
-              "Partial valid sequence before cycle:",
-              result.sortedTaskPdas.map((p) => p.toBase58()).join(" -> "),
-            ].join("\n"),
-          );
-        }
-
-        const executionOrder = result.sortedTaskPdas
-          .map((p, idx) => `Step ${idx + 1}: ${p.toBase58()}`)
-          .join("\n");
-
+      if (result.hasCycle) {
+        const cycleStr = (result.cycleNodes ?? [])
+          .map((p) => p.toBase58())
+          .join(", ");
         return toolTextResponse(
           [
-            "=== Task DAG Validated & Topologically Sorted ===",
-            `Total Tasks: ${result.sortedTaskPdas.length}`,
-            "Execution Order (prerequisites first):",
-            executionOrder,
+            "=== INVALID DAG: Circular Dependency Detected! ===",
+            "The following tasks form an unresolved circular loop:",
+            cycleStr,
+            "",
+            "Partial valid sequence before cycle:",
+            result.sortedTaskPdas.map((p) => p.toBase58()).join(" -> "),
           ].join("\n"),
         );
-      }),
+      }
+
+      return toolTextResponse(
+        [
+          "=== Valid Execution Order Computed ===",
+          "Total Tasks: " + result.sortedTaskPdas.length,
+          "Execution Order:",
+          result.sortedTaskPdas
+            .map((p, idx) => `  ${idx + 1}. ${p.toBase58()}`)
+            .join("\n"),
+        ].join("\n"),
+      );
+    }),
   );
 }

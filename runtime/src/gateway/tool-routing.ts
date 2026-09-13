@@ -67,6 +67,8 @@ const DEFAULT_FAMILY_CAPS: Record<string, number> = {
   agenc: 8,
   wallet: 6,
   social: 6,
+  dex: 6,
+  jupiter: 7,
   "mcp.kitty": 9,
   "mcp.tmux": 8,
   "mcp.neovim": 8,
@@ -210,6 +212,39 @@ const REQUIRED_MCP_FAMILY_BY_TERM: Record<string, string> = {
   vim: "mcp.neovim",
 };
 
+const DEFI_TERMS = new Set([
+  "token",
+  "tokens",
+  "sol",
+  "jup",
+  "bonk",
+  "wif",
+  "ray",
+  "price",
+  "prices",
+  "swap",
+  "swaps",
+  "trade",
+  "trades",
+  "trading",
+  "scalp",
+  "scalping",
+  "market",
+  "markets",
+  "liquidity",
+  "dex",
+  "dexscreener",
+  "jupiter",
+  "quote",
+  "quotes",
+  "trending",
+  "defi",
+  "profit",
+  "position",
+  "buy",
+  "sell",
+]);
+
 interface NormalizedRoutingConfig {
   enabled: boolean;
   minToolsPerTurn: number;
@@ -312,6 +347,7 @@ function jaccardSimilarity(a: readonly string[], b: readonly string[]): number {
 }
 
 function familyFromToolName(name: string): string {
+  if (name.startsWith("dex_")) return "dex";
   const firstDot = name.indexOf(".");
   if (firstDot <= 0) return "default";
   const prefix = name.slice(0, firstDot).toLowerCase();
@@ -617,6 +653,7 @@ export class ToolRouter {
     const hasFileIntent = intentTerms.some((term) => FILE_TERMS.has(term));
     const hasNetworkIntent = intentTerms.some((term) => NETWORK_TERMS.has(term));
     const hasMCPIntent = intentTerms.some((term) => MCP_TERMS.has(term));
+    const hasDeFiIntent = intentTerms.some((term) => DEFI_TERMS.has(term));
     const explicitTabIntent = intentTerms.some((term) => TAB_MANAGEMENT_TERMS.has(term));
     const requiredFamilies = requiredFamiliesForTerms(intentTerms);
     const terminalIntent = resolveTerminalIntent(intentTerms);
@@ -627,6 +664,10 @@ export class ToolRouter {
       for (const term of intentTerms) {
         if (tool.keywords.has(term)) score += 3;
         if (tool.descriptionTerms.has(term)) score += 1;
+      }
+
+      if (hasDeFiIntent && (tool.family === "dex" || tool.family === "jupiter")) {
+        score += 25;
       }
 
       if (hasShellIntent && (tool.name === "system.bash" || tool.name === "desktop.bash")) {

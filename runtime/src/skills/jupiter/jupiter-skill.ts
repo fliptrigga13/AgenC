@@ -145,7 +145,16 @@ export class JupiterSkill implements Skill {
       {
         name: "getTokenPrice",
         description: "Get token price in USD via Jupiter Price API",
-        execute: (params: unknown) => this.getTokenPrice(params as string[]),
+        execute: (params: unknown) => {
+          const mints = Array.isArray(params)
+            ? params
+            : Array.isArray((params as any)?.mints)
+              ? (params as any).mints
+              : typeof (params as any)?.mint === "string"
+                ? [(params as any).mint]
+                : [];
+          return this.getTokenPrice(mints as string[]);
+        },
       },
     ];
   }
@@ -474,11 +483,58 @@ export class JupiterSkill implements Skill {
   }
 
   /**
-   * Get token prices in USD via Jupiter Price API.
+   * Get token prices in USD via Jupiter Price API with DexScreener fallback.
    */
   async getTokenPrice(mints: string[]): Promise<Map<string, TokenPrice>> {
     this.ensureReady();
-    return this.client!.getPrice(mints);
+    const expandedMints: string[] = [];
+    for (const m of mints) {
+      if (typeof m !== "string") continue;
+      if (m.includes("/") || m.includes("-")) {
+        const parts = m.split(/[\/\-]/);
+        expandedMints.push(...parts);
+      } else {
+        expandedMints.push(m);
+      }
+    }
+    const resolvedMints = expandedMints.map((m) => {
+      if (typeof m !== "string") return String(m);
+      const upper = m.toUpperCase();
+      if (upper === "SOL" || upper === "WSOL") return WSOL_MINT;
+      if (upper === "USDC") return "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+      if (upper === "JUP") return "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN";
+      if (upper === "BONK") return "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263";
+      return m;
+    });
+
+    try {
+      return await this.client!.getPrice(resolvedMints);
+    } catch {
+      // Fallback to in-house DexScreener price lookup if Jupiter API host is unreachable
+      const result = new Map<string, TokenPrice>();
+      await Promise.all(
+        resolvedMints.map(async (mint) => {
+          try {
+            const res = await fetch(
+              `https://api.dexscreener.com/latest/dex/tokens/${encodeURIComponent(mint)}`,
+            );
+            if (res.ok) {
+              const data = (await res.json()) as any;
+              const pair = data.pairs?.[0];
+              if (pair && pair.priceUsd) {
+                result.set(mint, {
+                  mint,
+                  priceUsd: parseFloat(pair.priceUsd),
+                });
+              }
+            }
+          } catch {
+            // Ignore single token fetch errors
+          }
+        }),
+      );
+      return result;
+    }
   }
 
   // ============================================================================

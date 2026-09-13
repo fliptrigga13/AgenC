@@ -86,7 +86,11 @@ function createToolFromAction(
     async execute(args: Record<string, unknown>): Promise<ToolResult> {
       try {
         const result = await action.execute(args);
-        return { content: safeStringify(result) };
+        const payload =
+          result instanceof Map
+            ? Object.fromEntries(result.entries())
+            : result;
+        return { content: safeStringify(payload) };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         return {
@@ -210,7 +214,7 @@ export const JUPITER_ACTION_SCHEMAS: ActionSchemaMap = {
       mints: {
         type: "array",
         items: { type: "string" },
-        description: "Token mint addresses to look up",
+        description: "Token symbols (e.g. SOL, JUP, BONK, USDC) or base58 mint addresses to look up USD prices",
       },
     },
     required: ["mints"],

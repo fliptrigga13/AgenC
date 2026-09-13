@@ -28,48 +28,48 @@ export function CreateTaskForm({ onCreate }: CreateTaskFormProps) {
     return (
       <button
         onClick={() => setExpanded(true)}
-        className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-dashed border-tetsuo-200 rounded-xl text-sm text-tetsuo-400 hover:border-accent hover:text-accent hover:bg-accent-bg/30 transition-all duration-200"
+        className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-[#ffaa33]/35 rounded-xl text-sm font-semibold text-[#ffb84d] bg-[#1a0e05]/80 hover:bg-[#ffaa33]/15 hover:border-[#ffaa33]/60 transition-all duration-200 shadow-[0_2px_12px_rgba(255,119,0,0.15),inset_0_1px_0_rgba(255,200,100,0.1)]"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-        Create Task
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+        <span>+ Deploy Autonomous Task</span>
       </button>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3 p-4 rounded-xl border border-accent/20 bg-accent-bg/30 animate-panel-enter">
+    <form onSubmit={handleSubmit} className="space-y-3.5 p-5 rounded-xl border border-[#ff7700]/40 bg-[#0c0e17]/95 backdrop-blur-xl shadow-[0_0_25px_rgba(255,119,0,0.15)] animate-panel-enter">
       <div>
-        <label className="text-[10px] text-tetsuo-400 uppercase tracking-[0.15em] font-medium block mb-1.5">Description</label>
+        <label className="text-[11px] text-slate-400 uppercase tracking-widest font-mono font-medium block mb-1.5">Task Objective & Instruction</label>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="w-full bg-surface border border-tetsuo-200 rounded-lg px-3 py-2.5 text-sm text-tetsuo-700 resize-none focus:outline-none focus:border-accent focus:shadow-[0_0_0_3px_rgba(var(--accent),0.1)] transition-all duration-200 placeholder:text-tetsuo-400"
+          className="w-full bg-[#05070c] border border-white/10 rounded-lg px-3.5 py-2.5 text-sm text-slate-100 resize-none focus:outline-none focus:border-[#ffaa33] focus:shadow-[0_0_15px_rgba(255,119,0,0.25)] transition-all duration-200 placeholder:text-slate-500 font-sans"
           rows={3}
-          placeholder="Task description..."
+          placeholder="Describe on-chain objective, contract targets, or agent requirements..."
           autoFocus
         />
       </div>
       <div>
-        <label className="text-[10px] text-tetsuo-400 uppercase tracking-[0.15em] font-medium block mb-1.5">Reward (SOL)</label>
+        <label className="text-[11px] text-slate-400 uppercase tracking-widest font-mono font-medium block mb-1.5">Escrow Bounty (SOL)</label>
         <input
           type="number"
           value={reward}
           onChange={(e) => setReward(e.target.value)}
-          className="w-full bg-surface border border-tetsuo-200 rounded-lg px-3 py-2.5 text-sm text-tetsuo-700 focus:outline-none focus:border-accent focus:shadow-[0_0_0_3px_rgba(var(--accent),0.1)] transition-all duration-200 placeholder:text-tetsuo-400"
-          placeholder="0"
+          className="w-full bg-[#05070c] border border-white/10 rounded-lg px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-[#ffaa33] focus:shadow-[0_0_15px_rgba(255,119,0,0.25)] transition-all duration-200 placeholder:text-slate-500 font-mono"
+          placeholder="0.00"
         />
       </div>
-      <div className="flex gap-2 pt-1">
+      <div className="flex gap-2.5 pt-1">
         <button
           type="submit"
-          className="px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:opacity-90 hover:shadow-lg hover:shadow-accent/20 active:scale-[0.98] transition-all duration-200"
+          className="btn-orange-primary px-5 py-2 rounded-lg text-sm font-bold active:scale-[0.98] transition-all duration-200"
         >
-          Create
+          Deploy to Solana
         </button>
         <button
           type="button"
           onClick={() => setExpanded(false)}
-          className="px-4 py-2 text-tetsuo-500 text-sm hover:text-tetsuo-700 transition-colors"
+          className="px-4 py-2 text-slate-400 text-sm hover:text-white transition-colors"
         >
           Cancel
         </button>

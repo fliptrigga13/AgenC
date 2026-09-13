@@ -8,17 +8,17 @@ interface StatCardProps {
 
 export function StatCard({ label, value, subtext, icon, accent }: StatCardProps) {
   return (
-    <div className={`rounded-xl border p-4 transition-all duration-200 hover:shadow-md ${
+    <div className={`rounded-xl border p-4.5 transition-all duration-300 hover:shadow-lg backdrop-blur-xl ${
       accent
-        ? 'border-accent/30 bg-accent-bg shadow-[0_0_12px_rgba(var(--accent),0.08)]'
-        : 'border-tetsuo-200 bg-tetsuo-50 hover:border-tetsuo-300'
+        ? 'border-[#ffaa33]/40 bg-gradient-to-br from-[#221006]/85 via-[#140b05]/85 to-[#0b0c14]/90 shadow-[0_4px_24px_rgba(255,119,0,0.12)]'
+        : 'border-white/[0.08] bg-[#0c0e17]/80 hover:border-[#ffaa33]/30 hover:shadow-[0_4px_20px_rgba(255,119,0,0.08)]'
     }`}>
-      <div className="flex items-center justify-between mb-2">
-        <div className="text-[10px] text-tetsuo-400 uppercase tracking-[0.15em] font-medium">{label}</div>
-        {icon && <div className={accent ? 'text-accent' : 'text-tetsuo-400'}>{icon}</div>}
+      <div className="flex items-center justify-between mb-2.5">
+        <div className="text-[11px] text-slate-400 uppercase tracking-widest font-mono font-medium">{label}</div>
+        {icon && <div className={accent ? 'text-[#ffaa33] drop-shadow-[0_0_6px_#ff7700]' : 'text-slate-400'}>{icon}</div>}
       </div>
-      <div className={`text-2xl font-bold tracking-tight ${accent ? 'text-accent' : 'text-tetsuo-800'}`}>{value}</div>
-      {subtext && <div className="text-xs text-tetsuo-500 mt-1.5">{subtext}</div>}
+      <div className={`text-2xl font-bold tracking-tight font-sans ${accent ? 'text-[#ffaa33]' : 'text-white'}`}>{value}</div>
+      {subtext && <div className="text-xs text-slate-400 mt-1.5 font-sans">{subtext}</div>}
     </div>
   );
 }

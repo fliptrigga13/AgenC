@@ -15,6 +15,17 @@ import * as fs from "fs";
 import * as fsPromises from "fs/promises";
 import * as path from "path";
 import * as os from "os";
+import {
+  isEncryptedKeystore,
+  loadEncryptedKeypair,
+  saveEncryptedKeypair,
+} from "./keystore.js";
+
+export {
+  isEncryptedKeystore,
+  loadEncryptedKeypair,
+  saveEncryptedKeypair,
+};
 
 /**
  * Anchor-compatible wallet interface.
@@ -218,7 +229,21 @@ function parseKeypairJson(content: string, filePath: string): Keypair {
  * @throws KeypairFileError if the file doesn't exist, contains invalid JSON,
  *         or doesn't contain a valid 64-byte array
  */
-export async function loadKeypairFromFile(filePath: string): Promise<Keypair> {
+export async function loadKeypairFromFile(
+  filePath: string,
+  passphrase?: string,
+): Promise<Keypair> {
+  if (await isEncryptedKeystore(filePath)) {
+    const keyPass = passphrase ?? process.env.AGENC_KEY_PASSPHRASE;
+    if (!keyPass) {
+      throw new KeypairFileError(
+        `Encrypted keystore detected at ${filePath}. Passphrase must be provided via argument or AGENC_KEY_PASSPHRASE environment variable.`,
+        filePath,
+      );
+    }
+    return loadEncryptedKeypair(filePath, keyPass);
+  }
+
   let content: string;
   try {
     content = await fsPromises.readFile(filePath, "utf-8");

@@ -23,6 +23,7 @@ export interface UseWalletReturn {
   lastError: string | null;
   refresh: () => void;
   airdrop: (amount?: number) => void;
+  creditEarnings: (amountSol: number) => void;
   handleMessage: (msg: WSMessage) => void;
 }
 
@@ -32,6 +33,22 @@ export function useWallet({ send, connected }: UseWalletOptions): UseWalletRetur
   const [airdropping, setAirdropping] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
   const requestedRef = useRef(false);
+
+  const creditEarnings = useCallback((amountSol: number) => {
+    setWallet((prev) => {
+      const currentSol = prev ? prev.sol : 0;
+      const newSol = Number((currentSol + amountSol).toFixed(4));
+      const newLamports = Math.round(newSol * 1_000_000_000);
+      return {
+        address: prev?.address || 'CUbv4HYp69VnCskwD7tGvE8Pq1R3wL9xM4fc7i',
+        lamports: newLamports,
+        sol: newSol,
+        network: prev?.network || 'devnet',
+        rpcUrl: prev?.rpcUrl || 'https://api.devnet.solana.com',
+        explorerUrl: prev?.explorerUrl || 'https://explorer.solana.com/address/CUbv4HYp69VnCskwD7tGvE8Pq1R3wL9xM4fc7i?cluster=devnet',
+      };
+    });
+  }, []);
 
   const refresh = useCallback(() => {
     setLoading(true);
@@ -94,5 +111,5 @@ export function useWallet({ send, connected }: UseWalletOptions): UseWalletRetur
     }
   }, []);
 
-  return { wallet, loading, airdropping, lastError, refresh, airdrop, handleMessage };
+  return { wallet, loading, airdropping, lastError, refresh, airdrop, creditEarnings, handleMessage };
 }
