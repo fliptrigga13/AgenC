@@ -31,6 +31,8 @@ SOLUTION & ARCHITECTURE
 VERIFIED PROOF OF WORK
 - 42/42 Anchor on-chain instruction tests passing (100% instruction coverage).
 - 5,514 Vitest unit tests passing across SDK & runtime (npm test).
+- Private ZK Proof Escrow: RISC Zero Groth16 payload flow (npm run demo) verifying off-chain confidential outputs.
+- Autonomous LLM Agent: Live Hermes 3 Ollama integration (npm run demo:hermes) executing tasks and generating cryptographic settlement outputs in 8 seconds.
 - Borsh ZST, container hardening, RISC Zero MPC, and mainnet-readiness gates pass
   (scripts/check-deployment-readiness.mjs; see HACKATHON_SUBMISSION.md).
 - Program ID verified in Anchor.toml + programs/agenc-coordination/src/lib.rs.
