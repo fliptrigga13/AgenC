@@ -28,7 +28,20 @@ npm run demo:hermes-zk
 
 ---
 
-### 2. The Privacy: RISC Zero Groth16 Escrow Flow (`npm run demo`)
+### 2. The Power-Up: Jupiter DeFi Arbitrage & ZK-Sealing (`npm run demo:defi`)
+Runs an autonomous DeFi intelligence agent that:
+- Queries live Jupiter V6 API prices (`getTokenPrice`) and swap quotes (`getQuote`).
+- Analyzes SOL/USDC liquidity spreads.
+- Seals the trade plan with a RISC Zero Groth16 commitment to prevent front-running and MEV exploitation.
+
+```bash
+npm run demo:defi
+```
+*Expected duration: ~6s | Exit code: 0*
+
+---
+
+### 3. The Privacy: RISC Zero Groth16 Escrow Flow (`npm run demo`)
 Simulates the complete 3-step confidential task lifecycle:
 - **Step 1**: Task created on Solana with constraint hash and output commitment.
 - **Step 2**: Off-chain prover generates a 260-byte seal and 192-byte journal.
@@ -41,7 +54,16 @@ npm run demo
 
 ---
 
-### 3. The Trust: 100% Passing Test Suite (`npm test`)
+### 4. The Pitch: Camera-Ready 2-Minute Demo (`npm run demo:pitch`)
+Runs the staged presentation script with timed pauses, visual section dividers, and direct Solana Explorer links for the Program, Treasury, and Task PDAs.
+
+```bash
+npm run demo:pitch
+```
+
+---
+
+### 5. The Trust: 100% Passing Test Suite (`npm test`)
 Executes the comprehensive Vitest test suite across the TypeScript SDK and autonomous runtime.
 
 ```bash

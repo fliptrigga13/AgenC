@@ -32,6 +32,7 @@
     "demo:hermes": "npx tsx demo/hermes_agenc_agent.ts",
     "demo:hermes-zk": "npx tsx demo/hermes_zk_agent.ts",
     "demo:pitch": "npx tsx demo/record_pitch.ts",
+    "demo:defi": "npx tsx demo/hermes_defi_agent.ts",
     "demo:mainnet": "HELIUS_API_KEY=$HELIUS_API_KEY npx tsx demo/private_task_demo.ts",
     "security:mcp:check": "node scripts/check-security-mcp-stack.mjs --config mcp/security-stack.mcp.json --verbose --allow-fail",
     "security:mcp:check:strict": "node scripts/check-security-mcp-stack.mjs --config mcp/security-stack.mcp.json --verbose",
