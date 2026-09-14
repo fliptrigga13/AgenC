@@ -49,6 +49,7 @@ This document contains the exact 1-click form autofill for the **Colosseum Crypt
 * **Verify Agent Social Feed:** `npm run agent:feed` (Hermes broadcasts sealed intel on-chain; Agent-Scout verifies & stakes reputation upvote).
 * **Verify Reputation Allocator:** `npm run agent:reputation` (Hermes computes RARS scores & executes dynamic stake delegation & slashing on Devnet).
 * **Verify x402 Micro-Payments:** `npm run agent:x402` (M2M HTTP 402 paywall challenge on Solana; signature verification & deliverable unlock).
+* **Verify System Readiness (100/100):** `npm run agent:validate` (Full-stack automated audit: Devnet RPC, Ollama latency, ZK pipeline & 15-demo checklist).
 * **Verify Video Pitch Golden Path:** `npm run demo:pitch` (Camera-ready 2-minute pitch flow with direct Solana Explorer links).
 * **Verify Code Quality:** `npm test` (5,514 passing unit tests across 269 test files; 42/42 Anchor on-chain instructions passing).
 

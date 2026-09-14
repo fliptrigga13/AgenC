@@ -160,7 +160,16 @@ npm run agent:x402
 
 ---
 
-### 15. The Pitch: Camera-Ready 2-Minute Demo (`npm run demo:pitch`)
+### 15. The Grand Benchmark: Full-Stack Submission Readiness (`npm run agent:validate`)
+Runs an end-to-end full-system diagnostic: Devnet RPC, Program account state, local Ollama latency, RISC Zero commitment benchmarks, and verifies all 15 demo entry points, returning a verified **100/100 Readiness Score**:
+
+```bash
+npm run agent:validate
+```
+
+---
+
+### 16. The Pitch: Camera-Ready 2-Minute Demo (`npm run demo:pitch`)
 Runs the staged presentation script with timed pauses, visual section dividers, and direct Solana Explorer links for the Program, Treasury, and Task PDAs.
 
 ```bash
