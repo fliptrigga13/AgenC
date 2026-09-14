@@ -16,6 +16,7 @@ interface MenuItem {
 
 const MENU_ITEMS: MenuItem[] = [
   { key: '1', label: 'Chat', view: 'chat', ariaLabel: '[1] CHAT', icon: 'M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z' },
+  { key: 'H', label: 'Hunter HUD', view: 'hunter', ariaLabel: '[H] HUNTER', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
   { key: '2', label: 'Telemetry', view: 'status', ariaLabel: '[2] DASH', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
   { key: '3', label: 'Skills', view: 'skills', ariaLabel: '[3] TOOLS', icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4' },
   { key: '4', label: 'Tasks', view: 'tasks', ariaLabel: '[4] TASKS', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },

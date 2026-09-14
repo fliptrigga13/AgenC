@@ -21,6 +21,7 @@ import { useWallet } from './hooks/useWallet';
 import { useActivityFeed } from './hooks/useActivityFeed';
 import { useAgents } from './hooks/useAgents';
 import { useDesktop } from './hooks/useDesktop';
+import { MissionControl } from './components/mission-control/MissionControl';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { QuantumCursorLighting } from './components/effects/QuantumCursorLighting';
 import { BBSHeader } from './components/BBSHeader';
@@ -110,7 +111,7 @@ function restoreComposerFocus(snapshot: ComposerFocusSnapshot) {
 }
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<ViewId>('chat');
+  const [currentView, setCurrentView] = useState<ViewId>('hunter');
   const [selectedApproval, setSelectedApproval] = useState<ApprovalRequest | null>(null);
   const { theme } = useTheme();
 
@@ -515,6 +516,9 @@ export default function App() {
               tokenUsage={chat.tokenUsage}
               onOpenRevenueEngine={() => setRevenueDrawerOpen(true)}
             />
+          )}
+          {currentView === 'hunter' && (
+            <MissionControl />
           )}
           {currentView === 'status' && (
             <AgentStatusView

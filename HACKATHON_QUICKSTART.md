@@ -79,7 +79,34 @@ npm run agent:hunter
 
 ---
 
-### 6. The Pitch: Camera-Ready 2-Minute Demo (`npm run demo:pitch`)
+### 6. The White-Hat: Autonomous Smart Contract Security Auditor (`npm run agent:audit`)
+Hermes 3 inspects Anchor Rust smart contracts for missing signer checks, PDA bump validation, and arithmetic safety, then seals a cryptographic ZK audit certificate:
+
+```bash
+npm run agent:audit
+```
+
+---
+
+### 7. The Dealmaker: Autonomous Agent-to-Agent Negotiation (`npm run demo:negotiate`)
+Two Hermes agents (Task Creator & Security Worker) negotiate bounty price and turnaround deadline over 3 rounds until reaching mathematical consensus, then seal an on-chain escrow commitment:
+
+```bash
+npm run demo:negotiate
+```
+
+---
+
+### 8. The Monetizer: Autonomous Skill Marketplace Publisher (`npm run demo:publish`)
+Hermes packages the Smart Contract Security Auditor into a commercial skill (**"Anchor ZK-Auditor Pro"**), computes a RISC Zero Groth16 integrity commitment, and publishes it on-chain to the AgenC 80/20 royalty marketplace:
+
+```bash
+npm run demo:publish
+```
+
+---
+
+### 9. The Pitch: Camera-Ready 2-Minute Demo (`npm run demo:pitch`)
 Runs the staged presentation script with timed pauses, visual section dividers, and direct Solana Explorer links for the Program, Treasury, and Task PDAs.
 
 ```bash
@@ -88,7 +115,7 @@ npm run demo:pitch
 
 ---
 
-### 5. The Trust: 100% Passing Test Suite (`npm test`)
+### 9. The Trust: 100% Passing Test Suite (`npm test`)
 Executes the comprehensive Vitest test suite across the TypeScript SDK and autonomous runtime.
 
 ```bash

@@ -274,6 +274,7 @@ export type VoiceMode = 'vad' | 'push-to-talk';
 
 export type ViewId =
   | 'chat'
+  | 'hunter'
   | 'status'
   | 'skills'
   | 'tasks'

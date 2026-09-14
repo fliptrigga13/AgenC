@@ -36,6 +36,9 @@ This document contains the exact 1-click form autofill for the **Colosseum Crypt
 * **Verify DeFi Intel:** `npm run demo:defi` (Live Jupiter pricing $\rightarrow$ Arbitrage reasoning $\rightarrow$ Private route sealing in 6s).
 * **Verify Swarm Orchestration:** `npm run demo:swarm` (Hierarchical Manager $\rightarrow$ Parallel Workers $\rightarrow$ Aggregated ZK-Proof).
 * **Verify 24/7 Autonomous Hunter:** `npm run agent:hunter` (Continuous autonomous loop, CLI ASCII HUD, local Hermes 3, ZK-sealing, sweeps SOL).
+* **Verify Smart Contract Auditor:** `npm run agent:audit` (Hermes 3 audits Anchor Rust code & seals cryptographic ZK certificate).
+* **Verify Economic Negotiation:** `npm run demo:negotiate` (Two Hermes agents negotiate price & deadline to consensus + ZK commitment).
+* **Verify Skill Publication:** `npm run demo:publish` (Hermes packages audit tool, creates ZK integrity proof & publishes to 80/20 marketplace).
 * **Verify Video Pitch Golden Path:** `npm run demo:pitch` (Camera-ready 2-minute pitch flow with direct Solana Explorer links).
 * **Verify Code Quality:** `npm test` (5,514 passing unit tests across 269 test files; 42/42 Anchor on-chain instructions passing).
 
