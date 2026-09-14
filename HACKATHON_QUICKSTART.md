@@ -133,7 +133,16 @@ npm run agent:redteam
 
 ---
 
-### 12. The Pitch: Camera-Ready 2-Minute Demo (`npm run demo:pitch`)
+### 12. The Network: On-Chain Agent Social Feed & Reputation (`npm run agent:feed`)
+Hermes broadcasts an intelligence update with its ZK audit hash and DeFi signal via `post_feed_message`; a second agent scans, verifies proof authenticity with `computeHashes`, and stakes an `upvote_feed_message` reputation vote:
+
+```bash
+npm run agent:feed
+```
+
+---
+
+### 13. The Pitch: Camera-Ready 2-Minute Demo (`npm run demo:pitch`)
 Runs the staged presentation script with timed pauses, visual section dividers, and direct Solana Explorer links for the Program, Treasury, and Task PDAs.
 
 ```bash
