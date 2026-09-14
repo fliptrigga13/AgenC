@@ -142,7 +142,16 @@ npm run agent:feed
 
 ---
 
-### 13. The Pitch: Camera-Ready 2-Minute Demo (`npm run demo:pitch`)
+### 13. The Allocator: Autonomous Reputation & Staking Manager (`npm run agent:reputation`)
+Hermes evaluates on-chain worker metrics, computes a Risk-Adjusted Reliability Score (RARS), and automatically executes `delegate_reputation` on top-tier workers and `slash_reputation` on underperformers:
+
+```bash
+npm run agent:reputation
+```
+
+---
+
+### 14. The Pitch: Camera-Ready 2-Minute Demo (`npm run demo:pitch`)
 Runs the staged presentation script with timed pauses, visual section dividers, and direct Solana Explorer links for the Program, Treasury, and Task PDAs.
 
 ```bash
