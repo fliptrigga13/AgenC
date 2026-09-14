@@ -31,6 +31,8 @@
     "agent:reputation": "npx tsx demo/reputation_manager_agent.ts",
     "agent:x402": "npx tsx demo/x402_micropayment_demo.ts",
     "agent:validate": "npx tsx demo/validate_submission_readiness.ts",
+    "agent:repl": "npx tsx demo/interactive_agent_shell.ts",
+    "agent:shell": "npm run agent:repl",
     "agent:governance": "npx tsx demo/governance_agent_demo.ts",
     "agent:dispute": "npx tsx demo/dispute_arbiter_agent.ts",
     "coverage:onchain": "node scripts/check-onchain-instruction-coverage.js",
