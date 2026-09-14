@@ -41,7 +41,20 @@ npm run demo:defi
 
 ---
 
-### 3. The Privacy: RISC Zero Groth16 Escrow Flow (`npm run demo`)
+### 3. The Swarm: Multi-Agent Orchestration & ZK Aggregation (`npm run demo:swarm`)
+Runs a hierarchical agent swarm:
+- **Manager Agent**: Decomposes a complex protocol mission into sub-tasks.
+- **Worker Agents**: Security Specialist and DeFi Specialist execute in parallel.
+- **ZK Aggregation**: Manager aggregates outputs and seals the entire swarm delivery in a single RISC Zero Groth16 commitment.
+
+```bash
+npm run demo:swarm
+```
+*Expected duration: ~12s | Exit code: 0*
+
+---
+
+### 4. The Privacy: RISC Zero Groth16 Escrow Flow (`npm run demo`)
 Simulates the complete 3-step confidential task lifecycle:
 - **Step 1**: Task created on Solana with constraint hash and output commitment.
 - **Step 2**: Off-chain prover generates a 260-byte seal and 192-byte journal.

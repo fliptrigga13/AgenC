@@ -34,6 +34,7 @@ This document contains the exact 1-click form autofill for the **Colosseum Crypt
 * **Environment:** `git clone https://github.com/fliptrigga13/AgenC.git && cd AgenC && git checkout release/v1.0.0-onchain-marketplace && npm install`
 * **Verify Live State & ZK-Sealing:** `npm run demo:hermes-zk` (Queries live Devnet state $\rightarrow$ Reasons $\rightarrow$ Generates ZK-commitment in 6.4s).
 * **Verify DeFi Intel:** `npm run demo:defi` (Live Jupiter pricing $\rightarrow$ Arbitrage reasoning $\rightarrow$ Private route sealing in 6s).
+* **Verify Swarm Orchestration:** `npm run demo:swarm` (Hierarchical Manager $\rightarrow$ Parallel Workers $\rightarrow$ Aggregated ZK-Proof).
 * **Verify Video Pitch Golden Path:** `npm run demo:pitch` (Camera-ready 2-minute pitch flow with direct Solana Explorer links).
 * **Verify Code Quality:** `npm test` (5,514 passing unit tests across 269 test files; 42/42 Anchor on-chain instructions passing).
 
