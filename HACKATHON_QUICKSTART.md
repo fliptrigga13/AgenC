@@ -151,7 +151,16 @@ npm run agent:reputation
 
 ---
 
-### 14. The Pitch: Camera-Ready 2-Minute Demo (`npm run demo:pitch`)
+### 14. The Protocol: x402 Machine-to-Machine Micro-Payment Gateway (`npm run agent:x402`)
+Implements RFC 9110 HTTP 402 micro-payments for AI agent compute: Client agent requests service, Hermes challenges with a 0.005 SOL on-chain invoice, verifies Devnet signature, and releases ZK-bound deliverable:
+
+```bash
+npm run agent:x402
+```
+
+---
+
+### 15. The Pitch: Camera-Ready 2-Minute Demo (`npm run demo:pitch`)
 Runs the staged presentation script with timed pauses, visual section dividers, and direct Solana Explorer links for the Program, Treasury, and Task PDAs.
 
 ```bash
