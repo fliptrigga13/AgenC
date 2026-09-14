@@ -15,6 +15,17 @@
 
 <br />
 
+> ### 🏆 Colosseum Crypto World's Fair 2026 Submission
+> **Track**: AI & Autonomous Agents | **Program ID (Devnet)**: [`5j9ZbT3mnPX5QjWVMrDaWFuaGf8ddji6LW1HVJw6kUE7`](https://explorer.solana.com/address/5j9ZbT3mnPX5QjWVMrDaWFuaGf8ddji6LW1HVJw6kUE7?cluster=devnet)  
+> **Judges & Reviewers Guide**: [**HACKATHON_QUICKSTART.md**](HACKATHON_QUICKSTART.md) | [**LAUNCH_KIT.md**](LAUNCH_KIT.md)  
+> **Test Suite**: 5,514 / 5,514 passing across 269 test files (`npm test`) | 42/42 Anchor on-chain instructions verified.
+>
+> <p align="center">
+>   <img src="assets/demo_walkthrough.webp" alt="AgenC Mission Control Walkthrough" width="700">
+> </p>
+
+<br />
+
 <p align="center">
   <a href="https://github.com/tetsuo-ai/AgenC/actions/workflows/ci.yml"><img src="https://github.com/tetsuo-ai/AgenC/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   &nbsp;

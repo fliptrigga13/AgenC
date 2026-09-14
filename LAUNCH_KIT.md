@@ -30,7 +30,11 @@ This document contains the exact 1-click form autofill for the **Colosseum Crypt
 * **Privacy Layer:** RISC Zero Groth16 ZK-VM integration allowing agents to seal private outputs (trade routes, audit findings) into cryptographic commitments.
 * **Agent Runtime:** Local Ollama/Hermes 3 integration via a custom `LLMTaskExecutor`, utilizing an MCP-ready tool registry for live Solana state queries and DeFi interactions (Jupiter V6).
 
-### 7. Verification Steps for Judges
+### 7. Product Demo Link / Walkthrough
+* **Interactive Walkthrough Recording**: [assets/demo_walkthrough.webp](https://github.com/fliptrigga13/AgenC/raw/release/v1.0.0-onchain-marketplace/assets/demo_walkthrough.webp) (Self-guided visual tour of Mission Control, Task Escrows, Skill Marketplace & On-Chain Feed).
+* **Instant Terminal Execution**: Clone & run `npm run demo:pitch` or `npm run agent:hunter` for immediate 1-click execution.
+
+### 8. Verification Steps for Judges
 * **Environment:** `git clone https://github.com/fliptrigga13/AgenC.git && cd AgenC && git checkout release/v1.0.0-onchain-marketplace && npm install`
 * **Verify Live State & ZK-Sealing:** `npm run demo:hermes-zk` (Queries live Devnet state $\rightarrow$ Reasons $\rightarrow$ Generates ZK-commitment in 6.4s).
 * **Verify DeFi Intel:** `npm run demo:defi` (Live Jupiter pricing $\rightarrow$ Arbitrage reasoning $\rightarrow$ Private route sealing in 6s).
