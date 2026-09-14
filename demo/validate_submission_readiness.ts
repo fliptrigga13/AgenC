@@ -68,7 +68,8 @@ async function runSystemBenchmark() {
     "agent:hunter", "agent:audit", "agent:dispute", "agent:governance",
     "demo:publish", "demo:negotiate", "demo:swarm", "demo:defi", 
     "demo:hermes-zk", "demo:pitch", "agent:redteam", "agent:feed", 
-    "agent:reputation", "agent:x402", "agent:validate", "agent:repl"
+    "agent:reputation", "agent:x402", "agent:validate", "agent:repl",
+    "agent:sentry"
   ];
 
   results.totalScripts = targetDemos.length;

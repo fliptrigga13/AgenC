@@ -199,6 +199,15 @@ npm run demo:pitch
 
 ---
 
+### 17. The Sentry: Autonomous Telemetry & Health Monitor (`npm run agent:sentry`)
+Runs a continuous background telemetry loop monitoring Solana Devnet slot progression, local LLM reasoning latency, and heap memory allocation, logging health heartbeats to `sentry_telemetry.log` every 60 seconds:
+
+```bash
+npm run agent:sentry
+```
+
+---
+
 ### 9. The Trust: 100% Passing Test Suite (`npm test`)
 Executes the comprehensive Vitest test suite across the TypeScript SDK and autonomous runtime.
 

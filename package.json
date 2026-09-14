@@ -33,6 +33,7 @@
     "agent:validate": "npx tsx demo/validate_submission_readiness.ts",
     "agent:repl": "npx tsx demo/interactive_agent_shell.ts",
     "agent:shell": "npm run agent:repl",
+    "agent:sentry": "npx tsx demo/sentry_monitor_agent.ts",
     "agent:governance": "npx tsx demo/governance_agent_demo.ts",
     "agent:dispute": "npx tsx demo/dispute_arbiter_agent.ts",
     "coverage:onchain": "node scripts/check-onchain-instruction-coverage.js",

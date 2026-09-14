@@ -161,7 +161,8 @@ async function handleValidate() {
     "agent:hunter", "agent:audit", "agent:dispute", "agent:governance",
     "demo:publish", "demo:negotiate", "demo:swarm", "demo:defi", 
     "demo:hermes-zk", "demo:pitch", "agent:redteam", "agent:feed", 
-    "agent:reputation", "agent:x402", "agent:validate", "agent:repl"
+    "agent:reputation", "agent:x402", "agent:validate", "agent:repl",
+    "agent:sentry"
   ];
   let verified = 0;
   for (const s of targetDemos) {
