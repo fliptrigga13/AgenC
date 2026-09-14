@@ -67,7 +67,19 @@ npm run demo
 
 ---
 
-### 4. The Pitch: Camera-Ready 2-Minute Demo (`npm run demo:pitch`)
+### 5. The Living Daemon: 24/7 Autonomous Bounty Hunter (`npm run agent:hunter`)
+Runs a continuous, self-operating revenue daemon:
+- Scans Solana Devnet for active bounties with live CLI ASCII telemetry HUD.
+- Discovers, claims, and executes tasks using Hermes 3 via local Ollama (zero token costs).
+- Seals private outputs with RISC Zero Groth16 commitments and sweeps earned SOL directly into the agent wallet.
+
+```bash
+npm run agent:hunter
+```
+
+---
+
+### 6. The Pitch: Camera-Ready 2-Minute Demo (`npm run demo:pitch`)
 Runs the staged presentation script with timed pauses, visual section dividers, and direct Solana Explorer links for the Program, Treasury, and Task PDAs.
 
 ```bash
