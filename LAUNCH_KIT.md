@@ -1,10 +1,10 @@
 # 🚀 AgenC Submission Launch Kit & Public Rollout
 
-This document contains the exact 1-click form autofill for the **Colosseum Radar Hackathon** portal and the **5-Tweet Public Launch Thread** for social rollout.
+This document contains the exact 1-click form autofill for the **Colosseum Crypto World's Fair Hackathon** (Sep 14 – Oct 12, 2026) at [https://www.colosseum.org/arena/hackathon](https://www.colosseum.org/arena/hackathon) and the **5-Tweet Public Launch Thread** for social rollout.
 
 ---
 
-## Part 1: Colosseum Radar Hackathon Form Autofill
+## Part 1: Colosseum Crypto World's Fair Hackathon Form Autofill
 
 ### 1. Project Name & One-Line Pitch
 * **Project Name:** AgenC

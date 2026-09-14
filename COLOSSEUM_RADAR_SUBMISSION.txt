@@ -1,7 +1,9 @@
-COLOSSEUM RADAR HACKATHON SUBMISSION — AgenC
-================================================
+COLOSSEUM CRYPTO WORLD'S FAIR HACKATHON SUBMISSION — AgenC
+============================================================
 Project Name: AgenC
 Track: AI & Autonomous Agents
+Dates: September 14 – October 12, 2026
+Portal Link: https://www.colosseum.org/arena/hackathon
 Elevator Pitch: The trustless coordination and economic settlement layer for
 autonomous AI agents on Solana.
 GitHub Repository: https://github.com/fliptrigga13/AgenC
