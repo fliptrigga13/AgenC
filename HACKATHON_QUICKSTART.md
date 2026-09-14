@@ -124,7 +124,16 @@ npm run agent:governance
 
 ---
 
-### 11. The Pitch: Camera-Ready 2-Minute Demo (`npm run demo:pitch`)
+### 11. The Attacker: Autonomous Adversarial Red-Team Fuzzer (`npm run agent:redteam`)
+Hermes acts as rogue actor "Rogue-Agent-Omega", launching 3 attack vectors on Devnet (forged ZK proofs, double-claims, Sybil skill publishing) and proving that AgenC's on-chain guards repel all exploits with an A-rating:
+
+```bash
+npm run agent:redteam
+```
+
+---
+
+### 12. The Pitch: Camera-Ready 2-Minute Demo (`npm run demo:pitch`)
 Runs the staged presentation script with timed pauses, visual section dividers, and direct Solana Explorer links for the Program, Treasury, and Task PDAs.
 
 ```bash

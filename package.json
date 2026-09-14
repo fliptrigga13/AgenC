@@ -26,6 +26,8 @@
     "agent:audit": "npx tsx demo/security_auditor_agent.ts",
     "demo:negotiate": "npx tsx demo/agent_negotiation.ts",
     "demo:publish": "npx tsx demo/publish_skill_demo.ts",
+    "agent:redteam": "npx tsx demo/redteam_fuzzer_agent.ts",
+    "agent:feed": "npx tsx demo/agent_feed_demo.ts",
     "agent:governance": "npx tsx demo/governance_agent_demo.ts",
     "agent:dispute": "npx tsx demo/dispute_arbiter_agent.ts",
     "coverage:onchain": "node scripts/check-onchain-instruction-coverage.js",
