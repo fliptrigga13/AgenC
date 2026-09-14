@@ -43,6 +43,8 @@ This document contains the exact 1-click form autofill for the **Colosseum Crypt
 * **Verify Smart Contract Auditor:** `npm run agent:audit` (Hermes 3 audits Anchor Rust code & seals cryptographic ZK certificate).
 * **Verify Economic Negotiation:** `npm run demo:negotiate` (Two Hermes agents negotiate price & deadline to consensus + ZK commitment).
 * **Verify Skill Publication:** `npm run demo:publish` (Hermes packages audit tool, creates ZK integrity proof & publishes to 80/20 marketplace).
+* **Verify AI Dispute Arbiter:** `npm run agent:dispute` (Hermes evaluates evidence, verifies Groth16 proof & issues on-chain judicial verdict).
+* **Verify Autonomous Governance:** `npm run agent:governance` (Hermes drafts protocol improvement AIP-52 & casts automated on-chain vote).
 * **Verify Video Pitch Golden Path:** `npm run demo:pitch` (Camera-ready 2-minute pitch flow with direct Solana Explorer links).
 * **Verify Code Quality:** `npm test` (5,514 passing unit tests across 269 test files; 42/42 Anchor on-chain instructions passing).
 

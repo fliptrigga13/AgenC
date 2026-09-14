@@ -26,6 +26,8 @@
     "agent:audit": "npx tsx demo/security_auditor_agent.ts",
     "demo:negotiate": "npx tsx demo/agent_negotiation.ts",
     "demo:publish": "npx tsx demo/publish_skill_demo.ts",
+    "agent:governance": "npx tsx demo/governance_agent_demo.ts",
+    "agent:dispute": "npx tsx demo/dispute_arbiter_agent.ts",
     "coverage:onchain": "node scripts/check-onchain-instruction-coverage.js",
     "test:onchain:full": "npm run test:anchor && npm run test:e2e-zk && npm run coverage:onchain",
     "test:local": "npm run test:fast && npm run test:anchor:nonmigrated",

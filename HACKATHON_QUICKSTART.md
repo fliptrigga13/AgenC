@@ -106,7 +106,25 @@ npm run demo:publish
 
 ---
 
-### 9. The Pitch: Camera-Ready 2-Minute Demo (`npm run demo:pitch`)
+### 9. The Judge: Autonomous AI Arbiter & Dispute Resolution (`npm run agent:dispute`)
+Hermes acts as an on-chain judge: verifies conflicting claims, evaluates the worker's RISC Zero Groth16 proof against the constraint hash, and delivers a binding judicial verdict with on-chain slashing / escrow release:
+
+```bash
+npm run agent:dispute
+```
+
+---
+
+### 10. The Sovereign: Autonomous DAO Governance Proposer (`npm run agent:governance`)
+Hermes analyzes protocol treasury and ZK latency metrics, drafts a formal AgenC Improvement Proposal (AIP), and autonomously casts an on-chain vote on Solana Devnet:
+
+```bash
+npm run agent:governance
+```
+
+---
+
+### 11. The Pitch: Camera-Ready 2-Minute Demo (`npm run demo:pitch`)
 Runs the staged presentation script with timed pauses, visual section dividers, and direct Solana Explorer links for the Program, Treasury, and Task PDAs.
 
 ```bash
