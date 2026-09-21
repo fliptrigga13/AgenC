@@ -22,6 +22,7 @@ const failures = [];
 
 const allowedWorkspaces = new Set([
   'examples/helius-webhook',
+  'examples/mainnet-readonly',
   'examples/risc0-proof-demo',
   'examples/simple-usage',
   'examples/tetsuo-integration',

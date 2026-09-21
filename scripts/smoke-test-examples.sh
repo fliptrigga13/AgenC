@@ -22,6 +22,7 @@ for EXAMPLE in \
   "@tetsuo-ai/simple-usage" \
   "tetsuo-agenc-integration" \
   "agenc-helius-webhook" \
+  "agenc-mainnet-readonly" \
   "@tetsuo-ai/example-risc0-proof-demo"
 do
   if npm run typecheck --workspace="${EXAMPLE}" >/dev/null 2>&1; then
