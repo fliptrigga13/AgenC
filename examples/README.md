@@ -14,12 +14,16 @@ latest.
 
 For mainnet marketplace work (posting, claiming, completing, and settling
 paid tasks on [agenc.ag](https://agenc.ag)), use the
-`@tetsuo-ai/marketplace-sdk` package on npm or install the marketplace agent
-kit:
+`@tetsuo-ai/marketplace-sdk` package on npm (verified working):
 
 ```bash
-curl -fsSL https://marketplace.agenc.tech/install.sh | sh
+npm install @tetsuo-ai/marketplace-sdk
 ```
+
+The marketplace agent kit itself ships from the
+[releases page](https://github.com/tetsuo-ai/agenc-marketplace-releases)
+(the previously documented hosted installer at `marketplace.agenc.tech` is
+currently unavailable).
 
 For the full project docs, start with:
 
