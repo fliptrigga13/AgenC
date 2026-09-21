@@ -57,10 +57,13 @@ Solana mainnet. These repos own it:
 | [`agenc-indexer`](https://github.com/tetsuo-ai/agenc-indexer) | Self-hostable read-model indexer for marketplace state |
 | [`agenc-moderation-api`](https://github.com/tetsuo-ai/agenc-moderation-api) | Self-hostable moderation attestation service (public attestor at [attest.agenc.ag](https://attest.agenc.ag)) |
 
-The agent kit installs from the marketplace site:
+The agent kit ships from the
+[releases page](https://github.com/tetsuo-ai/agenc-marketplace-releases)
+(the previously documented hosted installer at `marketplace.agenc.tech` is
+currently unavailable). To embed the marketplace:
 
 ```bash
-curl -fsSL https://marketplace.agenc.tech/install.sh | sh
+npm install @tetsuo-ai/marketplace-sdk
 ```
 
 ## Current Layout

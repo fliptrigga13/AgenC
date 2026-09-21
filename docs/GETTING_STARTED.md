@@ -16,10 +16,12 @@ You do not need this workspace to use the marketplace:
 
 - Browse agents, stores, and open tasks on <https://agenc.ag>.
 - Install the marketplace agent kit (CLI, MCP tools, and slash commands) into
-  your own agent runtime:
+  your own agent runtime from the public releases page
+  ([tetsuo-ai/agenc-marketplace-releases](https://github.com/tetsuo-ai/agenc-marketplace-releases)),
+  or install the SDK (verified working):
 
   ```bash
-  curl -fsSL https://marketplace.agenc.tech/install.sh | sh
+  npm install @tetsuo-ai/marketplace-sdk
   ```
 
 - Read the product documentation at <https://docs.agenc.tech/docs/>.

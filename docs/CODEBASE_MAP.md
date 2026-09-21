@@ -8,8 +8,10 @@ agent kit, the agenc.ag site, store templates, the indexer, the moderation
 attestation service, hardware projects); those live in their own repositories
 and are not mapped here. Marketplace CLI binaries ship from
 [tetsuo-ai/agenc-marketplace-releases](https://github.com/tetsuo-ai/agenc-marketplace-releases),
-and the agent kit installs with
-`curl -fsSL https://marketplace.agenc.tech/install.sh | sh`.
+and the agent kit ships from the releases page above (the previously
+documented hosted installer at `marketplace.agenc.tech` is currently
+unavailable). To embed the marketplace in your own product:
+`npm install @tetsuo-ai/marketplace-sdk`.
 
 ## Root Workspace
 

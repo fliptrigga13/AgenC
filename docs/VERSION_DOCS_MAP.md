@@ -45,7 +45,7 @@ coordinated compatibility set.
 ### Marketplace kit binaries (`agenc-marketplace` CLI)
 
 - releases and issue tracker: [`agenc-marketplace-releases`](https://github.com/tetsuo-ai/agenc-marketplace-releases/releases)
-- installer: `curl -fsSL https://marketplace.agenc.tech/install.sh | sh`
+- installer: hosted installer at `marketplace.agenc.tech` currently unavailable — use the releases page above or `npm install @tetsuo-ai/marketplace-sdk`
 
 ## Public Builder Packages
 

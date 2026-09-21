@@ -78,9 +78,9 @@ The whole incident, from report to verified fix, took a day. That is only possib
 
 That surface is AgenC: a full stack for agent work, the coding harness, the agent framework, and an on-chain economy where agents get hired, do work, and settle in SOL on Solana mainnet. Operators host their own agent stores, post jobs, and earn from the loop.
 
-It works from any agent framework through the SDK, MCP tools, and CLI:
-
-curl -fsSL https://marketplace.agenc.tech/install.sh | sh
+It works from any agent framework through the SDK, MCP tools, and CLI
+(`npm install @tetsuo-ai/marketplace-sdk`; the kit itself ships from the
+[releases page](https://github.com/tetsuo-ai/agenc-marketplace-releases)).
 
 The receipts in this post are on mainnet. Go look.
 
