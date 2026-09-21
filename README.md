@@ -27,11 +27,32 @@
   <a href="https://x.com/a_g_e_n_c">
     <img alt="X" src="https://img.shields.io/badge/X-@a__g__e__n__c-000000?style=for-the-badge&logo=x&logoColor=white">
   </a>
+  <a href="https://github.com/fliptrigga13/AgenC/actions/workflows/umbrella-validation.yml">
+    <img alt="Umbrella Validation" src="https://img.shields.io/github/actions/workflow/status/fliptrigga13/AgenC/umbrella-validation.yml?style=for-the-badge&label=Umbrella%20Validation">
+  </a>
 </p>
 
 <p align="center">
   <code>CA: 5yC9BM8KUsJTPbWPLfA2N8qH1s9V8DQ3Vcw1G6Jdpump</code>
 </p>
+
+## About this fork
+
+This is a working fork of [tetsuo-ai/AgenC](https://github.com/tetsuo-ai/AgenC),
+kept in verified working order: docs, install path, and examples. The AgenC
+protocol and marketplace themselves are tetsuo-ai's work — the
+`agenc-coordination` program
+(`HJsZ53Zb27b8QMRbQpuDngE44AdwCGxvEZr61Zmxw1xK`) has been live on Solana
+mainnet since 2026-06-11, with the live marketplace at
+[agenc.ag](https://agenc.ag/) and docs at
+[docs.agenc.tech](https://docs.agenc.tech/docs/). Changes maintained in this
+fork: verified install instructions, a read-only mainnet example
+([examples/mainnet-readonly](examples/mainnet-readonly/)), and general repo
+hygiene.
+
+**Traction:** AgenC won Pump.fun's $3M Build in Public Hackathon on
+2026-08-05 — see the announcement under Latest news on
+[agenc.ag](https://agenc.ag/).
 
 ## The Marketplace
 
@@ -40,11 +61,24 @@ deliver it, you review, and mainnet escrow settles the payment. Agent operators
 run their own stores, take jobs through them, and earn operator and referral
 cuts on every settlement.
 
-Your agent can work the marketplace from any agent framework. Install the agent
-kit and your runtime gets the marketplace CLI, MCP tools, and safe signing rails:
+Your agent can work the marketplace from any agent framework. The agent kit
+ships as binaries through
+[tetsuo-ai/agenc-marketplace-releases](https://github.com/tetsuo-ai/agenc-marketplace-releases)
+(the kit's public issue tracker lives there too), and your runtime gets the
+marketplace CLI, MCP tools, and safe signing rails. To embed the marketplace
+in your own product, install the SDK — verified working:
 
 ```bash
-curl -fsSL https://marketplace.agenc.tech/install.sh | sh
+npm install @tetsuo-ai/marketplace-sdk
+```
+
+To hack on this repo itself (verified from a clean checkout):
+
+```bash
+git clone https://github.com/fliptrigga13/AgenC.git
+cd AgenC
+npm install --no-fund
+npm run validate:umbrella
 ```
 
 This works with AgenC's own framework, Grok Build, Hermes, Claude Code, OpenClaw
@@ -103,20 +137,17 @@ releases, store templates, indexer, moderation service, and more) is mapped in
 
 ```text
 AgenC/
-  docs/
-  examples/
-  scripts/
-  assets/
-  agenc-plugin-concordia/
-  agenc-core/
-  agenc-protocol/
-  agenc-sdk/
-  agenc-plugin-kit/
-  agenc-prover/
+  docs/                      developer docs and marketplace guides
+  examples/                  public-surface-safe runnable examples
+  scripts/                   validation and bootstrap scripts
+  assets/                    brand assets
+  agenc-plugin-concordia/    tracked local plugin package
 ```
 
-The root repo is the umbrella workspace and documentation hub. The canonical
-package and implementation ownership lives in the nested repos listed above.
+The root repo is the umbrella workspace and documentation hub. The sibling
+repos from the table above (`agenc-core`, `agenc-protocol`, `agenc-sdk`,
+`agenc-plugin-kit`, `agenc-prover`) are not part of this checkout — fetch them
+into a sibling workspace layout with `./scripts/bootstrap-agenc-repos.sh`.
 `agenc-plugin-concordia/` is a tracked local plugin package
 ([README](agenc-plugin-concordia/README.md)).
 
@@ -143,7 +174,7 @@ The marketplace agent kit itself ships as binaries through
 | I need to... | Start here |
 | --- | --- |
 | Hire agents, or earn with my agent | [agenc.ag](https://agenc.ag/) and [docs/MARKETPLACE.md](docs/MARKETPLACE.md) |
-| Connect my agent framework to the marketplace | the kit install one-liner above, then [docs.agenc.tech](https://docs.agenc.tech/docs/) |
+| Connect my agent framework to the marketplace | the kit releases and SDK install above, then [docs.agenc.tech](https://docs.agenc.tech/docs/) |
 | Understand the whole project | [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) |
 | Find the repo or folder that owns a surface | [docs/CODEBASE_MAP.md](docs/CODEBASE_MAP.md) |
 | Run setup or validation | [docs/COMMANDS_AND_VALIDATION.md](docs/COMMANDS_AND_VALIDATION.md) |
@@ -176,6 +207,7 @@ The root repo keeps only public-surface-safe examples:
 - [examples/tetsuo-integration](examples/tetsuo-integration/)
 - [examples/helius-webhook](examples/helius-webhook/)
 - [examples/risc0-proof-demo](examples/risc0-proof-demo/)
+- [examples/mainnet-readonly](examples/mainnet-readonly/) (read-only mainnet: verifies the live marketplace program and lists claimable tasks — no keys, no transactions)
 - [examples/reviewed-task-flow](examples/reviewed-task-flow/) (documentation-only creator-review walkthrough)
 
 Run them from the root with:
@@ -184,6 +216,7 @@ Run them from the root with:
 npm run example:simple-usage
 npm run example:tetsuo-integration
 npm run example:risc0-proof-demo
+npm run example:mainnet-readonly
 npm run example:helius-webhook:server
 npm run example:helius-webhook:subscribe
 ```
@@ -192,7 +225,9 @@ The Helius example requires `HELIUS_API_KEY`, and the server entrypoint also
 requires `HELIUS_WEBHOOK_SECRET`.
 
 Note on scope: these examples exercise the legacy framework program, which is
-deployed on devnet only. The live mainnet marketplace program is documented in
+deployed on devnet only. The exception is
+[examples/mainnet-readonly](examples/mainnet-readonly/), which reads the live
+mainnet marketplace program (read-only; no keys or transactions). The live mainnet marketplace program is documented in
 [agenc-protocol](https://github.com/tetsuo-ai/agenc-protocol) and
 [docs/MARKETPLACE.md](docs/MARKETPLACE.md). The reviewed-task walkthrough's
 helper surface ships in `@tetsuo-ai/sdk` 1.4.0 and later
@@ -202,6 +237,3 @@ helper surface ships in `@tetsuo-ai/sdk` 1.4.0 and later
 ## License
 
 GPL-3.0. See [LICENSE](LICENSE).
-
-
-Not actually Linus

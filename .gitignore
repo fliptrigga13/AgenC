@@ -133,4 +133,5 @@ __pycache__/
 # Internal planning docs — never publish to the public umbrella remote (see memory: umbrella-repo-is-public)
 PLAN.md
 TODO.md
+audit-report.md
 docs/thesis-audit-*/
