@@ -1,0 +1,19 @@
+{
+  "name": "agenc-mainnet-readonly",
+  "version": "1.0.0",
+  "description": "Read-only mainnet example: verify the live AgenC marketplace program and list claimable tasks",
+  "type": "module",
+  "scripts": {
+    "start": "npx tsx index.ts",
+    "typecheck": "tsc --project tsconfig.json"
+  },
+  "dependencies": {
+    "@solana/kit": "^6.9.0",
+    "@tetsuo-ai/marketplace-sdk": "0.12.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
+  }
+}
